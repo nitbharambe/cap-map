@@ -1,62 +1,17 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# ## Import Libraries
-
-# In[ ]:
-
-
-#Install libraries if using google colab
-#pip install pandapower
-#pip install simbench
-
-
-# In[1]:
-
-
-#Import the pandapower and the networks module:
-import pandapower as pp
-import pandapower.networks as nw
-import simbench as sb
-import pandas as pd
-import numpy as np
-import os,sys
-'''
-#Plotting
-from pandapower.plotting.plotly.mapbox_plot import set_mapbox_token
-from pandapower.plotting.plotly import simple_plotly, pf_res_plotly, vlevel_plotly
-import matplotlib.pyplot as plt
-import pandapower.plotting as plot
-import pandapower.plotting.plotly as pplotly
-try:
-    import seaborn
-    colors = seaborn.color_palette()
-except:
-    colors = ["b", "g", "r", "c", "y"]
-%matplotlib inline
-'''
-#Timeseries
-import tempfile
-from pandapower.control import ConstControl
-from pandapower.timeseries import DFData
-from pandapower.timeseries import OutputWriter
-from pandapower.timeseries.run_time_series import run_timeseries
-
-
-# ## Define Functions
-
-# In[2]:
-
-
 def init_net():
     '''
+    Drops any added load/generation
     Initialization of load and generation p_mw and q_mvar is needed because the run_timeseries replaces them after every iteration
+    Drops Constcontrol objects created by sb.apply_cost_controllers
     
     OUTPUT - 
         net- Pandapower network with initial values
     '''
+    net.load=net.load.head(init_cap_l[0])
+    net.sgen=net.sgen.head(init_cap_l[1])
     net.load[['p_mw','q_mvar']]=initload
     net.sgen[['p_mw','q_mvar']]=initsgen
+    net.controller=net.controller.iloc[0:0]
     return net
 
 def define_log():
@@ -99,22 +54,52 @@ def add_loadgen(net_t, loadorgen, conn_at_bus, size_p,size_q,prof):
         return 0
     return net_t
 
-def drop_loadgen(net_t, loadorgen):
+def load_files():
     '''
-    Removes the last added capacity from the input grid added by add_loadgen
+    Loads files of previous TS simulation
+    
+    OUTPUT
+        vm_pu,line_load,trafo_load (tuple) - Previous results of timeseries
+    '''
+    vm_pu_file = os.path.join(output_dir, "res_bus", "vm_pu.json")
+    vm_pu = pd.read_json(vm_pu_file)
+    line_load_file = os.path.join(output_dir, "res_line", "loading_percent.json")
+    line_load = pd.read_json(line_load_file)
+    trafo_load_file = os.path.join(output_dir, "res_trafo", "loading_percent.json")
+    trafo_load = pd.read_json(trafo_load_file)
+    return vm_pu,line_load,trafo_load
+
+def violations_long(net):
+    '''
+    Checks for any violations created in the grid by additional capacity and returns tuple with the details
+    Loads the files created by timeseries simulation. Compares simulation values against the limits mentioned in the input grid.
     
     INPUT
-        net_t (PP net) - Pandapower net
-        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected
+        net (PP net) - Pandapower net
         
     OUTPUT
-        net_t (PP net) - Updated Pandapower net
+        check (bool) - tuple of violations with details
+        
     '''
-    if loadorgen=="load":
-        net_t.load=net_t.load.head(-1)            
-    elif loadorgen=="sgen":
-        net_t.sgen=net_t.sgen.head(-1)
-    return net_t
+    [vm_pu,line_load,trafo_load]=load_files()
+
+    pf_vm_extremes=pd.DataFrame(vm_pu.max())
+    pf_vm_extremes.columns=['pf_max_vm_pu']
+    pf_vm_extremes['pf_min_vm_pu']=vm_pu.min()
+    vm_pu_check = net.bus[['name','vn_kv','min_vm_pu','max_vm_pu']].join( pf_vm_extremes)
+    vm_pu_check = vm_pu_check[(vm_pu_check.pf_max_vm_pu>vm_pu_check.max_vm_pu) | (vm_pu_check.pf_min_vm_pu<vm_pu_check.min_vm_pu)] 
+
+    pf_line_extremes=pd.DataFrame(line_load.max())
+    pf_line_extremes.columns=['pf_max_loading_percent']
+    line_load_check = net.line[['name','from_bus','to_bus','max_loading_percent']].join( pf_line_extremes)
+    line_load_check = line_load_check[(line_load_check.pf_max_loading_percent>line_load_check.max_loading_percent)] 
+
+    pf_trafo_extremes=pd.DataFrame(trafo_load.max())
+    pf_trafo_extremes.columns=['pf_max_loading_percent']
+    trafo_load_check = net.trafo[['name','sn_mva','max_loading_percent']].join( pf_trafo_extremes)
+    trafo_load_check = trafo_load_check[(trafo_load_check.pf_max_loading_percent>trafo_load_check.max_loading_percent)] 
+    
+    return  vm_pu_check,line_load_check, trafo_load_check
 
 def violations(net):
     '''
@@ -130,14 +115,7 @@ def violations(net):
         check (bool) - 'True' for no violations. 'False' for violations present
         
     '''
-    vm_pu_file = os.path.join(output_dir, "res_bus", "vm_pu.json")
-    vm_pu = pd.read_json(vm_pu_file)
-
-    line_load_file = os.path.join(output_dir, "res_line", "loading_percent.json")
-    line_load = pd.read_json(line_load_file)
-
-    trafo_load_file = os.path.join(output_dir, "res_trafo", "loading_percent.json")
-    trafo_load = pd.read_json(trafo_load_file)
+    [vm_pu,line_load,trafo_load]=load_files()
 
     check = any(np.where(vm_pu.max() > net.bus['max_vm_pu'],True, False))
     check = check or any(np.where(vm_pu.min() < net.bus['min_vm_pu'],True, False))
@@ -145,16 +123,16 @@ def violations(net):
     check = check or any(np.where(trafo_load.max() > net.trafo['max_loading_percent'],True, False))
     return not check
 
+
 def feas_chk(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
     '''
     Initializes the PPnet, 
     Adds additional capacity, 
     applies load/generation profiles on all the grid elements,
-    runs timeseries for the specific case and save the results in the temporary output directory, 
-    clears the application of profiles from the input grid (Deletes the Constcontrol objects), 
-    drops the added capacity.
+    runs timeseries for the specific case and save the results in the temporary output directory,
+    Checks for violations
 
-    BUG: More like pending to do. Doesnt work for loads. Need to check process of how profiles from simbench are actually
+    BUG: More like pending TODO. Doesnt work for loads. Need to check process of how profiles from simbench are actually 
     getting applied to Constcontrol know the fix. Also will lead to finding how profiles from input will be applied on 
     the input grid.
     TODO: suppress/workaround printing of individual progress bars
@@ -176,16 +154,15 @@ def feas_chk(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
     net=add_loadgen(net, loadorgen, conn_at_bus, size_p,size_q, prof)
     profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
     sb.apply_const_controllers(net, profiles)    #create timeseries data from profiles and run powerflow
-    run_timeseries(net,time_steps,verbose=True)               #Run powerflow only over time_steps
-    net.controller=net.controller.iloc[0:0]
-    net=drop_loadgen(net, loadorgen)
+    run_timeseries(net,time_steps,continue_on_divergence=True,verbose=True)               #Run powerflow only over time_steps
     feas_result=violations(net)
     return feas_result
 
 def max_cap(net,ow,conn_at_bus,loadorgen,ul_p,ll_p,prof):
     '''
     Seach algorithm using feas_chk function over the range of ll_p and ul_p capacities
-    BUG: Doesnt work for capacity below 20MW, must require a minor fix
+    
+    TODO: Speed up, Try changing ul_p and ll_p as per voltage levels
     
     INPUT
         net (PP net) - Pandapower net
@@ -215,6 +192,43 @@ def max_cap(net,ow,conn_at_bus,loadorgen,ul_p,ll_p,prof):
             return ul_p
             break
     return ll_p
+'''
+def printProgressBar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
+    
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
+'''
+def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+    """
+    Call in a loop to create terminal progress bar.
+    the code is mentioned in : https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    #logger.info('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix))
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end="")
+    # Print New Line on Complete
+    if iteration == total:
+        print("\n")
 
 def all_cap_map(net,ow,loadorgen,ul_p,ll_p,prof):
     '''
@@ -233,101 +247,49 @@ def all_cap_map(net,ow,loadorgen,ul_p,ll_p,prof):
     OUTPUT
          allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses
     
-    '''    
+    '''
+    len_items=len(net.bus)
+    items = list(range(0, len_items))
+    printProgressBar(0, len_items, prefix = 'Progress:', suffix = 'Complete', length = 50)
     allcap=net.bus[['name','vn_kv']]
     allcap['max_add_cap']=np.nan
-    for conn_at_bus in range(len(net.bus)):
+    for i,conn_at_bus in enumerate(items):
         allcap['max_add_cap'][conn_at_bus]=max_cap(net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen,ul_p=ul_p,ll_p=ll_p,prof=prof)
+        printProgressBar(i + 1, len_items, prefix = 'Progress:', suffix = 'Complete', length = 50)
     return allcap
 
+def sing_res(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
+    '''
+    Same as feas_chk. Only difference is that instead of returning bool it returns tuple with results
+    Initializes the PPnet, 
+    Adds additional capacity, 
+    applies load/generation profiles on all the grid elements,
+    runs timeseries for the specific case and save the results in the temporary output directory,
+    Checks for violations
 
-# ## Set Parameters
+    BUG: More like pending to do. Doesnt work for loads. Need to check process of how profiles from simbench are actually 
+    getting applied to Constcontrol know the fix. Also will lead to finding how profiles from input will be applied on 
+    the input grid.
+    TODO: suppress/workaround printing of individual progress bars
+    
+    INPUT
+        net (PP net) - Pandapower net
+        ow (Object) - Output writer object
+        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected
+        conn_at_bus (int) - Bus at which additional capacity is connected
+        size_p (int) - Size of active power of additional capacity
+        size_q (int) - Size of reactive power of additional capacity
+        prof (str) - Name of the profile. Must be available in the net.profiles of the input grid
+        
+    OUTPUT
+        result (tuple) - violations details
+        
+    '''
+    net=init_net()
+    net=add_loadgen(net, loadorgen, conn_at_bus, size_p,size_q, prof)
+    profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+    sb.apply_const_controllers(net, profiles)    #create timeseries data from profiles and run powerflow
+    run_timeseries(net,time_steps,continue_on_divergence=True,verbose=True)               #Run powerflow only over time_steps
+    result=violations_long(net)
+    return result
 
-# ### Input Grid
-
-# In[3]:
-
-
-'''
-Input grid for developing code is sb_code1
-sb_code2 is the larger grid to test the code
-Initial values of the loads and generation are stored
-Maximum voltage limits are relaxed for testing sample code since the limit gets violated for the test grid without adding any capacity
-'''
-sb_code1 = "1-MV-rural--1-sw"  # rural MV grid of scenario 0 with full switchs
-sb_code2 = "1-HVMV-urban-all-0-sw"  # urban hv grid with one connected mv grid which has the subnet 2.202
-net = sb.get_simbench_net(sb_code1)
-net.bus.max_vm_pu=net.bus.max_vm_pu*1.05
-initload=net.load[['p_mw','q_mvar']]
-initsgen=net.sgen[['p_mw','q_mvar']]
-
-
-# ### Other parameters
-
-# In[4]:
-
-
-'''
-time_steps:Set time steps in range for the timeseries module to compute over. 
-    This parameter must be of same length as the length of profiles.
-ll_p and ul_p : limits for maximum and minimum capacity that can be added to any bus
-inp_q: input reactive power for added capacity. Assumed constant
-tol: Search algorithm tolerance (in MW)
-output_dir : Set directory for storing the logged varaiables. 
-    Commented output_dir line is for setting directory in the temporary files of the computer.
-ow: Create the output writer object ow
-'''
-time_steps=range(96)
-ll_p=20
-ul_p=90
-inp_q=0.1
-s_tol=1
-
-#output_dir = os.path.join(tempfile.gettempdir(), "simp_cap_v3")
-output_dir = os.path.join('C:\\Users\\nitbh\\OneDrive\\Documents\\IIPNB', "simp_cap_v3")
-if not os.path.exists(output_dir):
-    os.mkdir(output_dir)
-ow=define_log()   #For logging variables
-
-
-# ## Set Input
-
-# In[5]:
-
-
-'''
-Sample input. Use as needed
-prof and loadorgen are needed for getting the map
-Others are needed in case of individual capacity checks
-'''
-#size_pmw=10
-#size_qmw=0.05
-loadorgen='sgen'
-#prof='L0-A'
-prof='WP4'
-#conn_at_bus=2
-
-
-# ## Get Map
-
-# All_cap_map takes lot of time to calculate capacities of an entire map. Try using inner functions one at a time
-
-# In[6]:
-
-
-
-
-# In[7]:
-'''
-
-#max_cap(net,ow=ow,conn_at_bus=2, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
-
-from pycallgraph2 import PyCallGraph
-from pycallgraph2.output import GraphvizOutput
-
-graphviz = GraphvizOutput()
-graphviz.output_file = 'basic.png'
-with PyCallGraph(output=GraphvizOutput()):
-    max_cap(net, ow=ow, conn_at_bus=2, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
-    #code_to_profile()
-'''
