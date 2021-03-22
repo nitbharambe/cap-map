@@ -279,7 +279,7 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
 
 def all_cap_map(net,ow,loadorgen,ul_p,ll_p,prof):
     '''
-    Iteratre the max_cap function over all busses in the grid. 
+    Iteratre the max_cap function over all busses in the grid. Also sing_res for a slightly higher capacity to find out the limiting element
     
     TODO: Add progess bar
     
@@ -292,7 +292,7 @@ def all_cap_map(net,ow,loadorgen,ul_p,ll_p,prof):
         prof (str) - Name of the profile. Must be available in the net.profiles of the input grid
         
     OUTPUT
-         allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses
+         allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses and limiting element at each bus
     
     '''
     len_items=len(net.bus)
@@ -300,8 +300,11 @@ def all_cap_map(net,ow,loadorgen,ul_p,ll_p,prof):
     printProgressBar(0, len_items, prefix = 'Progress:', suffix = 'Complete', length = 50)
     allcap=net.bus[['name','vn_kv']]
     allcap['max_add_cap']=np.nan
+    allcap['lim_elm']=np.nan
     for i,conn_at_bus in enumerate(items):
-        allcap['max_add_cap'][conn_at_bus]=max_cap(net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen,ul_p=ul_p,ll_p=ll_p,prof=prof)
+        max_cap_at_bus=max_cap(net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen,ul_p=ul_p,ll_p=ll_p,prof=prof)
+        allcap['max_add_cap'][conn_at_bus]=max_cap_at_bus
+        allcap['lim_elm'][conn_at_bus]=sing_res(net,ow=ow,conn_at_bus=conn_at_bus, loadorgen=loadorgen, size_p=max_cap_at_bus+2*stol, size_q=0.1, prof=prof)
         printProgressBar(i + 1, len_items, prefix = 'Progress:', suffix = 'Complete', length = 50)
     return allcap
 
@@ -344,7 +347,7 @@ inp_q=0.1
 s_tol=0.005
 time_steps=range(96)
 
-#output_dir = os.path.join(tempfile.gettempdir(), "simp_cap_v3")
-output_dir = os.path.join('C:\\Users\\nitbh\\OneDrive\\Documents\\IIPNB', "simp_cap_v3")
+output_dir = os.path.join(tempfile.gettempdir(), "simp_cap_v3")
+#output_dir = os.path.join('C:\\Users\\nitbh\\OneDrive\\Documents\\IIPNB', "simp_cap_v3")
 if not os.path.exists(output_dir):
     os.mkdir(output_dir)
