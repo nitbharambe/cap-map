@@ -1,4 +1,52 @@
-def init_net():
+'''
+Code to be refined a lot later on
+TODO: Add default values of all functions
+'''
+
+
+#Import the pandapower and the networks module:
+import pandapower as pp
+import pandapower.networks as nw
+import simbench as sb
+import pandas as pd
+import numpy as np
+import os, sys, time
+'''
+#Plotting
+from pandapower.plotting.plotly.mapbox_plot import set_mapbox_token
+from pandapower.plotting.plotly import simple_plotly, pf_res_plotly, vlevel_plotly
+import matplotlib.pyplot as plt
+import pandapower.plotting as plot
+import pandapower.plotting.plotly as pplotly
+try:
+    import seaborn
+    colors = seaborn.color_palette()
+except:
+    colors = ["b", "g", "r", "c", "y"]
+%matplotlib inline
+'''
+#Timeseries
+import tempfile
+#from pandapower.control import ConstControl
+#from pandapower.timeseries import DFData
+from pandapower.timeseries import OutputWriter
+from pandapower.timeseries.run_time_series import run_timeseries
+
+
+
+def get_init_all(net):
+    '''
+    Returns initialization data for net
+    INPUT:
+        net : pandapower net
+    OUTPUT:
+        tuple of initial load, initial generation
+    '''
+    initload=net.load[['p_mw','q_mvar']]
+    initsgen=net.sgen[['p_mw','q_mvar']]
+    return initload,initsgen
+
+def init_net(net,init_all):
     '''
     Drops any added load/generation
     Initialization of load and generation p_mw and q_mvar is needed because the run_timeseries replaces them after every iteration
@@ -7,14 +55,15 @@ def init_net():
     OUTPUT - 
         net- Pandapower network with initial values
     '''
-    net.load=net.load.head(init_cap_l[0])
-    net.sgen=net.sgen.head(init_cap_l[1])
+    [initload,initsgen]=init_all
+    net.load=net.load.head(len(initload))
+    net.sgen=net.sgen.head(len(initsgen))
     net.load[['p_mw','q_mvar']]=initload
     net.sgen[['p_mw','q_mvar']]=initsgen
     net.controller=net.controller.iloc[0:0]
     return net
 
-def define_log():
+def define_log(net,time_steps):
     '''
     Creates output writer object required for timeseries simulation
     The timeseries module only calculates the values of variables mentioned here for each simulation. 
@@ -23,7 +72,7 @@ def define_log():
     OUTPUT
         ow - Output writer object
     '''
-    ow = OutputWriter(net, time_steps, output_path=output_dir, output_file_type=".json")    
+    ow = OutputWriter(net, time_steps, output_path=output_dir, output_file_type=".json")
     ow.log_variable('res_bus','vm_pu')
     ow.log_variable('res_line', 'loading_percent')
     ow.log_variable('res_trafo', 'loading_percent')
@@ -87,26 +136,24 @@ def violations_long(net):
     pf_vm_extremes.columns=['pf_max_vm_pu']
     pf_vm_extremes['pf_min_vm_pu']=vm_pu.min()
     vm_pu_check = net.bus[['name','vn_kv','min_vm_pu','max_vm_pu']].join( pf_vm_extremes)
-    vm_pu_check = vm_pu_check[(vm_pu_check.pf_max_vm_pu>vm_pu_check.max_vm_pu) | (vm_pu_check.pf_min_vm_pu<vm_pu_check.min_vm_pu)] 
+    vm_pu_check = vm_pu_check[(vm_pu_check.pf_max_vm_pu>vm_pu_check.max_vm_pu) | (vm_pu_check.pf_min_vm_pu<vm_pu_check.min_vm_pu)]
 
     pf_line_extremes=pd.DataFrame(line_load.max())
     pf_line_extremes.columns=['pf_max_loading_percent']
     line_load_check = net.line[['name','from_bus','to_bus','max_loading_percent']].join( pf_line_extremes)
-    line_load_check = line_load_check[(line_load_check.pf_max_loading_percent>line_load_check.max_loading_percent)] 
+    line_load_check = line_load_check[(line_load_check.pf_max_loading_percent>line_load_check.max_loading_percent)]
 
     pf_trafo_extremes=pd.DataFrame(trafo_load.max())
     pf_trafo_extremes.columns=['pf_max_loading_percent']
     trafo_load_check = net.trafo[['name','sn_mva','max_loading_percent']].join( pf_trafo_extremes)
-    trafo_load_check = trafo_load_check[(trafo_load_check.pf_max_loading_percent>trafo_load_check.max_loading_percent)] 
-    
+    trafo_load_check = trafo_load_check[(trafo_load_check.pf_max_loading_percent>trafo_load_check.max_loading_percent)]
+
     return  vm_pu_check,line_load_check, trafo_load_check
 
 def violations(net):
     '''
     Checks for any violations created in the grid by additional capacity.
     Loads the files created by timeseries simulation. Compares simulation values against the limits mentioned in the input grid.
-    
-    TODO: Create separate violations function for individual input. (Already done, might have to include it here)
     
     INPUT
         net (PP net) - Pandapower net
@@ -132,8 +179,7 @@ def feas_chk(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
     runs timeseries for the specific case and save the results in the temporary output directory,
     Checks for violations
 
-    BUG: More like pending TODO. Doesnt work for loads. Need to check process of how profiles from simbench are actually 
-    getting applied to Constcontrol know the fix. Also will lead to finding how profiles from input will be applied on 
+    TODO: Need to check process of how profiles from simbench are actually getting applied to Constcontrol know the fix. Also will lead to finding how profiles from input will be applied on 
     the input grid.
     TODO: suppress/workaround printing of individual progress bars
     
@@ -150,19 +196,20 @@ def feas_chk(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
         feas_result (bool) - 'True' for feasible, 'False' for not feasible
         
     '''
-    net=init_net()
+    init_all=get_init_all(net)
     net=add_loadgen(net, loadorgen, conn_at_bus, size_p,size_q, prof)
     profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
     sb.apply_const_controllers(net, profiles)    #create timeseries data from profiles and run powerflow
     run_timeseries(net,time_steps,continue_on_divergence=True,verbose=True)               #Run powerflow only over time_steps
     feas_result=violations(net)
+    net=init_net(net,init_all)
     return feas_result
 
 def max_cap(net,ow,conn_at_bus,loadorgen,ul_p,ll_p,prof):
     '''
     Seach algorithm using feas_chk function over the range of ll_p and ul_p capacities
     
-    TODO: Speed up, Try changing ul_p and ll_p as per voltage levels
+    TODO: Speed up, if it is required, try changing ul_p and ll_p as per voltage levels
     
     INPUT
         net (PP net) - Pandapower net
@@ -285,11 +332,20 @@ def sing_res(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
         result (tuple) - violations details
         
     '''
-    net=init_net()
-    net=add_loadgen(net, loadorgen, conn_at_bus, size_p,size_q, prof)
-    profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
-    sb.apply_const_controllers(net, profiles)    #create timeseries data from profiles and run powerflow
-    run_timeseries(net,time_steps,continue_on_divergence=True,verbose=True)               #Run powerflow only over time_steps
-    result=violations_long(net)
-    return result
+    if feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof):
+        return True
+    else:            
+        return violations_long(net)
+
+
+ll_p=0
+ul_p=90
+inp_q=0.1
+s_tol=0.005
+time_steps=range(96)
+
+#output_dir = os.path.join(tempfile.gettempdir(), "simp_cap_v3")
+output_dir = os.path.join('C:\\Users\\nitbh\\OneDrive\\Documents\\IIPNB', "simp_cap_v3")
+if not os.path.exists(output_dir):
+    os.mkdir(output_dir)
 
