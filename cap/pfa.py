@@ -304,23 +304,18 @@ def all_cap_map(net,ow,loadorgen,ul_p,ll_p,prof):
     for i,conn_at_bus in enumerate(items):
         max_cap_at_bus=max_cap(net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen,ul_p=ul_p,ll_p=ll_p,prof=prof)
         allcap['max_add_cap'][conn_at_bus]=max_cap_at_bus
-        allcap['lim_elm'][conn_at_bus]=sing_res(net,ow=ow,conn_at_bus=conn_at_bus, loadorgen=loadorgen, size_p=max_cap_at_bus+2*stol, size_q=0.1, prof=prof)
+        allcap['lim_elm'][conn_at_bus]=sing_res(net,ow=ow,conn_at_bus=conn_at_bus, loadorgen=loadorgen, size_p=max_cap_at_bus+2*s_tol, size_q=0.1, prof=prof)
         printProgressBar(i + 1, len_items, prefix = 'Progress:', suffix = 'Complete', length = 50)
     return allcap
 
 def sing_res(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
     '''
-    Same as feas_chk. Only difference is that instead of returning bool it returns tuple with results
-    Initializes the PPnet, 
-    Adds additional capacity, 
-    applies load/generation profiles on all the grid elements,
-    runs timeseries for the specific case and save the results in the temporary output directory,
-    Checks for violations
+    Same as feas_chk. Only difference is that instead of returning bool it returns tuple with details of violations
 
     BUG: More like pending to do. Doesnt work for loads. Need to check process of how profiles from simbench are actually 
     getting applied to Constcontrol know the fix. Also will lead to finding how profiles from input will be applied on 
     the input grid.
-    TODO: suppress/workaround printing of individual progress bars
+    TODO: This function is incomplete. Hence returns 'True' for now.
     
     INPUT
         net (PP net) - Pandapower net
@@ -335,10 +330,9 @@ def sing_res(net,ow,conn_at_bus,loadorgen, size_p, size_q, prof):
         result (tuple) - violations details
         
     '''
-    if feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof):
-        return True
-    else:            
-        return violations_long(net)
+    return True
+    #feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof)
+    #return violations_long(net)
 
 
 ll_p=0

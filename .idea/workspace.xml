@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="">
+    <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="Change output_dir, add results from csv">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/cap_nb-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/.ipynb_checkpoints/cap_nb-checkpoint.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cap/pfa.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap/pfa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cap_nb.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/cap_nb.ipynb" afterDir="false" />
     </list>
@@ -48,8 +47,24 @@
       <updated>1616241111635</updated>
       <workItem from="1616241114603" duration="3083000" />
       <workItem from="1616442592511" duration="217000" />
-      <workItem from="1616442998541" duration="4843000" />
+      <workItem from="1616442998541" duration="5356000" />
+      <workItem from="1616457289744" duration="2229000" />
     </task>
+    <task id="LOCAL-00001" summary="Change output_dir, add results from csv">
+      <created>1616456769405</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1616456769405</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Change output_dir, add results from csv">
+      <created>1616456841285</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1616456841285</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -67,15 +82,8 @@
     </option>
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="jupyter-line">
-          <url>notebook://C:/Users/nitbh/OneDrive/Documents/repository/cap-map/cap_nb.ipynb</url>
-          <line>2</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Change output_dir, add results from csv" />
+    <option name="LAST_COMMIT_MESSAGE" value="Change output_dir, add results from csv" />
   </component>
 </project>
