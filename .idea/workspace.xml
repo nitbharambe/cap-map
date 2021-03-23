@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="Change output_dir, add results from csv">
+    <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="Fix some issues">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cap/pfa.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap/pfa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cap_nb.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/cap_nb.ipynb" afterDir="false" />
@@ -48,7 +48,7 @@
       <workItem from="1616241114603" duration="3083000" />
       <workItem from="1616442592511" duration="217000" />
       <workItem from="1616442998541" duration="5356000" />
-      <workItem from="1616457289744" duration="2229000" />
+      <workItem from="1616457289744" duration="4944000" />
     </task>
     <task id="LOCAL-00001" summary="Change output_dir, add results from csv">
       <created>1616456769405</created>
@@ -64,7 +64,14 @@
       <option name="project" value="LOCAL" />
       <updated>1616456841285</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Fix some issues">
+      <created>1616461358999</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1616461358999</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -84,6 +91,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Change output_dir, add results from csv" />
-    <option name="LAST_COMMIT_MESSAGE" value="Change output_dir, add results from csv" />
+    <MESSAGE value="Fix some issues" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix some issues" />
   </component>
 </project>
