@@ -271,8 +271,7 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
 
 def all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):
     """
-    Iteratre the max_cap function over all busses in the grid. Also sing_res for a slightly higher capacity to find
-    out the limiting element
+    Iteratre the max_cap function over all busses in the grid.
 
     TODO: Add progess bar
 
@@ -284,11 +283,9 @@ def all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):
         ul_p (int) - Size of minimum additional capacity that can be added (Set as 0)
         prof (str) - Name of the profile. Must be available in the net.profiles of the input grid
 
-    OUTPUT allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses and limiting
-    element at each bus
-
+    OUTPUT allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses
     """
-    len_items = len(net.bus)
+    len_items = len(net.bus)-96
     items = list(range(0, len_items))
     printProgressBar(0, len_items, prefix='Progress:', suffix='Complete', length=50)
     allcap = net.bus[['name', 'vn_kv']]
@@ -298,8 +295,6 @@ def all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):
         max_cap_at_bus = max_cap(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen, ul_p=ul_p, ll_p=ll_p,
                                  prof=prof)
         allcap['max_add_cap'][conn_at_bus] = max_cap_at_bus
-        allcap['lim_elm'][conn_at_bus] = sing_res(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen,
-                                                  size_p=max_cap_at_bus + 2 * s_tol, size_q=0.1, prof=prof)
         printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)
     return allcap
 
@@ -326,9 +321,13 @@ def sing_res(net, ow, conn_at_bus, loadorgen, size_p, size_q, prof):
         result (tuple) - violations details
 
     """
-    return True
-    # feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof)
-    # return violations_long(net)
+    #return True
+    feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof)
+    return violations_long(net)
+
+def lim_elm_calc():
+    allcap['lim_elm'][conn_at_bus] = sing_res(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen,
+                                              size_p=max_cap_at_bus + 2 * s_tol, size_q=0.1, prof=prof)
 
 
 ll_p = 0
