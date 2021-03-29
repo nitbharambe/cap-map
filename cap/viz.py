@@ -7,7 +7,7 @@
 
 
 # power flow package & python package ( edited by Joe )
-import pfa
+from cap import pfa
 import copy
 import pandas as pd
 
