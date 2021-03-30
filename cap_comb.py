@@ -59,33 +59,32 @@ prof='WP4'
 ## Get Map / PFA
 '''
 all_cap_map function takes lot of time to calculate capacities of an entire map. So they will be stored in an external file and read again in next section. Try using other inner functions to check if they work
+Functions for finding maximum capacities
+The all_cap_map function is max_cap looped for all busses so try below functions for quick results.
+sing_res function is for checking individual case analysis
 '''
 
-#Functions for finding maximum capacities
 #sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
 #load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')
-
-#The all_cap_map function is max_cap looped for all busses so try below functions for quick results.
 pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
 #pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')
 #pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
 
-#%% md
-
 ## Visualisation
 
-#%%
-
+'''
+Load data from all cap here. Calculated and stored earlier for saving time  
+'''
 net.load['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
 net.sgen['max_sgen']=pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
-# Or just initialize to random values
+# Or we can also just initialize to random values
 #net.sgen['max_sgen']=np.random.randint(0,100,net.sgen.shape[0])
 #net.load['max_load']=np.random.randint(0,100,net.load.shape[0])
 
 
 #####################################################################
 ######################################################################
-# Required excuting pfa.max_cap() above to generate the graph
+# Following section requires executing any one timeseries case (to be used with pfa.sing_res later) above to generate the graph. (Already done)
 
 # extract time-series values
 networks, figures = viz.generate_graph_data(net)
