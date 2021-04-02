@@ -413,6 +413,10 @@ def generate_graph_data(net):
 
 Generate Dash graph. Calling this function along is enough for generating the grapgh.
 
+Input:
+should be with (net_data, time_step)
+
+Outpuy:
 return a link to the Dash site.
 
 """
