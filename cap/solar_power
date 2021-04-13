@@ -1,0 +1,5 @@
+month_summer=pd.read_csv('Solar_genJun.csv', delimiter=';').groupby('Hour')
+print(month_summer)
+#month_summer = month_summer.iloc[:,3]
+
+month_winter=pd.read_csv('Solar_genDec.csv', delimiter=';').iloc[:,3]
