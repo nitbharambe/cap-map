@@ -1,1 +1,26 @@
-import(
+import pandas as pd
+import tkinter as tk
+from tkinter import filedialog
+
+# GUI to choose csv file, this should be replaced with automated input from smart meters
+root= tk.Tk()
+canvas1 = tk.Canvas(root, width = 300, height = 300, bg = 'lightsteelblue2', relief = 'raised')
+canvas1.pack()
+
+def getCSV ():
+    global df
+    
+    import_file_path = filedialog.askopenfilename()
+    profile = pd.read_csv (import_file_path) # Read the csv file containin the desired profile data
+    print (df)
+    
+browseButton_CSV = tk.Button(text="      Import CSV File (consumption profile)     ", command=getCSV, bg='green', fg='white', font=('helvetica', 12, 'bold'))
+canvas1.create_window(150, 150, window=browseButton_CSV)
+
+root.mainloop()
+# Get the index (ie the hour) of maximum percentage load
+peak_h = profile.idxmax()['perc']
+
+# for this hour, gather data of a finer time resolution
+# perform calculations
+
