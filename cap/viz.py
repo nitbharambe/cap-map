@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 
 # Edited function res_plotly() and draw_traces()
 
-def draw_traces1(traces, on_map=False, map_style='basic', showlegend=True, figsize=1,
+def draw_traces_nograph(traces, on_map=False, map_style='basic', showlegend=True, figsize=1,
                 aspectratio='auto', filename='temp-plot.html'):
     """
     plots all the traces (which can be created using :func:`create_bus_trace`, :func:`create_line_trace`,
@@ -354,7 +354,7 @@ def pf_res_plotly_gen(net, cmap="binary_r", use_line_geodata=None, on_map=False,
                                       color='grey', size=bus_size * 2, trace_name='external_grid',
                                       patch_type=marker_type)
  
-    return draw_traces(line_traces + trafo_traces + ext_grid_trace + bus_trace_less + bus_trace_more,
+    return draw_traces_nograph(line_traces + trafo_traces + ext_grid_trace + bus_trace_less + bus_trace_more,
                        showlegend=False, aspectratio=aspectratio, on_map=on_map,
                        map_style=map_style, figsize=figsize, filename=filename)
 
@@ -513,7 +513,7 @@ def pf_res_plotly_eng(net, cmap="Jet", use_line_geodata=None, on_map=False, proj
                                       color='grey', size=bus_size * 2, trace_name='external_grid',
                                       patch_type=marker_type)
 
-    return draw_traces(line_traces + trafo_traces + ext_grid_trace + bus_trace,
+    return draw_traces_nograph(line_traces + trafo_traces + ext_grid_trace + bus_trace,
                        showlegend=False, aspectratio=aspectratio, on_map=on_map,
                        map_style=map_style, figsize=figsize, filename=filename)
 
@@ -531,8 +531,7 @@ Return two list, networks & figures. Which will be later used for Dash.
 1. the time series loop through columns instead of rows. This is dealt in the two loop structure down below.
 
 """
-
-def generate_graph_data(net):
+def generate_graph_data_eng(net):
     net = net
     result = pfa.load_files()
 
@@ -559,9 +558,24 @@ def generate_graph_data(net):
 
     #looping to get the time series graph
     for ii in np.arange(len(networks)):
-        figures[ii] = deepcopy(pf_res_ptly1(networks[ii],map_style='dark'))
+        figures[ii] = deepcopy(pf_res_plotly_eng(networks[ii],map_style='dark'))
        
     return networks, figures
+
+""" 
+
+Selecting the most important two graph for general users. The function needs to be revised later on for one more function to determine what is the graph we are going to show.
+
+"""
+def generate_graph_data_gen(networks_eng):
+    networks = networks_eng
+    figures = [None]*2
+    
+    figures[0] = deepcopy(pf_res_plotly_gen(networks[5],map_style='dark'))
+    ''' Here the pf_res_plotly_eng is only for demo, it should be pf_res_plotly_gen just like the previous line '''
+    figures[1] = deepcopy(pf_res_plotly_eng(networks[90],map_style='dark'))
+       
+    return figures
 
 
 # ### 2. Generate the grpah with Dash
