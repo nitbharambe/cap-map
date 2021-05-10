@@ -8,7 +8,8 @@ import dash  # (version 1.12.0) pip install dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-
+import dash_bootstrap_components as dbc
+import plotly.graph_objs as go
 ### Input Grid
 
 '''
@@ -75,11 +76,13 @@ pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, pro
 '''
 Load data from all cap here. Calculated and stored earlier for saving time  
 '''
-net.load['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
+#net.load['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
 net.sgen['max_sgen']=pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
 # Or we can also just initialize to random values
 #net.sgen['max_sgen']=np.random.randint(0,100,net.sgen.shape[0])
 #net.load['max_load']=np.random.randint(0,100,net.load.shape[0])
+net.bus['max_load']=np.random.randint(0,100,net.bus.shape[0])
+net.bus['cost']=np.random.randint(0,100,net.bus.shape[0])
 
 
 #####################################################################
@@ -87,76 +90,164 @@ net.sgen['max_sgen']=pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
 # Following section requires executing any one timeseries case (to be used with pfa.sing_res later) above to generate the graph. (Already done)
 
 # extract time-series values
-networks, figures = viz.generate_graph_data(net)
+networks_eng, figures_eng = viz.generate_graph_data_eng(net)
+figures_gen = viz.generate_graph_data_gen(networks_eng)
 
 # take the correct order for slider
-list_length = len(networks)-1
+list_length = len(networks_eng) - 1
+# activate Dash
+app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+# Dash component
+controls = dbc.Card(
+    [
+        dbc.FormGroup(
+            [
+                dbc.Label("Input 1"),
+                dcc.Dropdown(
+                    id="x-variable",
+                    options=[
+                        {"label": "col", "value": "col"}
+                    ],
+                    value="sepal length (cm)",
+                ),
+            ]
+        ),
+        dbc.FormGroup(
+            [
+                dbc.Label("Input 2"),
+                dcc.Dropdown(
+                    id="y-variable",
+                    options=[
+                        {"label": "col", "value": "col"}
+                    ],
+                    value="sepal width (cm)",
+                ),
+            ]
+        ),
+        dbc.FormGroup(
+            [
+                dbc.Label("Cluster count"),
+                dbc.Input(id="cluster-count", type="number", value=0),
+            ]
+        ),
+        dbc.FormGroup(
+            [
+                dbc.Label("Worse scenario in different time"),
+                dbc.Button("Summer", id="summer_button", active=True, color="success", className="mr-1"),
+                dbc.Button("Winter", id="winter_button", color="primary", className="mr-1"),
+            ]
+        ),
+    ],
+    body=True,
+)
 
-app = dash.Dash(__name__)
+# the enginner part of the graph
+engineer_part = html.Div(
+    [
+        html.H1("Capacity Map with Dash component, for Time-series usage", style={'text-align': 'center'}),
+        dcc.Dropdown(id="slct_year",
+                     options=[
+                         {"label": "2015", "value": 2015},
+                         {"label": "2016", "value": 2016},
+                         {"label": "2017", "value": 2017},
+                         {"label": "2018", "value": 2018}],
+                     multi=False,
+                     value=2015,
+                     style={'width': "40%"}
+                     ),
 
-# ------------------------------------------------------------------------------
-# App layout
-app.layout = html.Div([
+        html.Br(),
 
-    html.H1("Capacity Map with Dash component Testing", style={'text-align': 'center'}),
+        dcc.Graph(id='my_powerFlow_graph',
+                  style={
+                      "margin-left": "auto",
+                      "margin-right": "auto",
+                  },
+                  figure={}),
+        html.Div(id='output_container_slider', children=[]),
+        html.Br(),
 
-    dcc.Dropdown(id="slct_year",
-                 options=[
-                     {"label": "2015", "value": 2015},
-                     {"label": "2016", "value": 2016},
-                     {"label": "2017", "value": 2017},
-                     {"label": "2018", "value": 2018}],
-                 multi=False,
-                 value=2015,
-                 style={'width': "40%"}
-                 ),
+        dcc.Slider(
+            id='my-slider',
+            min=0,
+            max=list_length,
+            step=1,
+            value=0,
+        ),
+    ]
+)
 
-    html.Br(),
-
-    dcc.Graph(id='my_powerFlow_graph',
-              style={
-                  "margin-left": "auto",
-                  "margin-right": "auto",
-              },
-              figure={}),
-    html.Div(id='output_container_slider', children=[]),
-    html.Br(),
-
-    dcc.Slider(
-        id='my-slider',
-        min=0,
-        max=list_length,
-        step=1,
-        value=1,
-    ),
-
-],
-    # putting Style for the whole html.div block and it works!!!
-style={'width': '50%','padding-left':'25%', 'padding-right':'25%'},
+# the place to set up layout
+app.layout = dbc.Container(
+    [
+        html.H1("Capacity Map with Dash component, for general usage", style={'text-align': 'center'}),
+        html.Hr(),
+        dbc.Row(
+            [
+                dbc.Col(controls, md=4, align="start"),
+                dbc.Col(dcc.Graph(id="cluster-graph", figure={}), md=8),
+            ],
+            align="center",
+            style={'margin-bottom': '15%'}
+        ),
+        # this is part is the engineer par
+        engineer_part,
+    ],
+    # fluid=True,
 )
 
 
-# ------------------------------------------------------------------------------
-# Connect the Plotly graphs with Dash Components
+# callback functions can be align with multiple callbacks
+@app.callback(
+    Output("cluster-graph", "figure"),
+    [
+        Input("x-variable", "value"),
+        Input("y-variable", "value"),
+        Input("cluster-count", "value"),
+        Input("summer_button", "n_clicks"),
+        Input("winter_button", "n_clicks"),
+    ],
+)
+# Here insert the graph from pandapower, for beginner part
+def change_graph_input(x, y, n_clusters, summer_click, winter_click):
+    container = "The year chosen by user was: {}".format(x)
+    container_slider = "The time interval chosen by user was: {}".format(y)
+
+    fig_power = figures_gen[0]
+
+    if summer_click:
+        fig_power = figures_gen[0]
+    elif winter_click:
+        fig_power = figures_gen[1]
+
+        # 上面的output對應到這邊的return，是按照順序的
+    # The output is correspoding to the return value below, by order
+    return fig_power
+
+
+''' From the following, the code is used for the second graph '''
+
+
+# Connect the Plotly graphs with Dash Components, Fro expert part
 @app.callback(
     [Output(component_id='output_container_slider', component_property='children'),
      Output(component_id='my_powerFlow_graph', component_property='figure')],
     [Input(component_id='slct_year', component_property='value'),
-     Input(component_id = 'my-slider',component_property='value')]
+     Input(component_id='my-slider', component_property='value')]
 )
 def update_graph(option_slctd, slider_slctd):
     print(option_slctd)
     print(type(option_slctd))
 
     container = "The year chosen by user was: {}".format(option_slctd)
-    container_slider = "The time chosen by user was: {}".format(slider_slctd)
+    container_slider = "The time interval chosen by user was: {}".format(slider_slctd)
 
-    fig_power = figures[slider_slctd]
+    fig_power = figures_eng[slider_slctd]
 
     # 上面的output對應到這邊的return，是按照順序的
     # The output is correspoding to the return value below, by order
     return container_slider, fig_power
 
 
-if __name__ == '__main__':
-    app.run_server(debug=True,use_reloader=False,port=3004)
+if __name__ == "__main__":
+    app.run_server(debug=False, port=3004)
