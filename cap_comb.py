@@ -67,8 +67,8 @@ sing_res function is for checking individual case analysis
 
 #sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
 #load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')
-# 要跑數據的時候要把這裡打開
-pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
+''' To generate the data, need to remove the comment of next line of code '''
+#pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
 #pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')
 #pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
 
@@ -103,23 +103,24 @@ controls = dbc.Card(
     [
         dbc.FormGroup(
             [
-                dbc.Label("Input for capacity"),
-                dcc.Dropdown(
-                    id="x-variable",
-                    options=[
-                        {"label": "5", "value": "5"}
-                    ],
-                    value="sepal length (cm)",
+                dbc.Label("Step1: Input capacity"),
+                html.Br(),
+                dcc.Input(
+                    id="capacity",
+                    type="number",
+                    placeholder="Enter a capacity (MW)",
                 ),
             ]
         ),
         dbc.FormGroup(
             [
-                dbc.Label("Input 2"),
+                dbc.Label("Step2: Select location"),
                 dcc.Dropdown(
-                    id="y-variable",
+                    id="location",
+                    placeholder="Select a location",
                     options=[
-                        {"label": "col", "value": "col"}
+                        {"label": "Stockholm", "value": "col"},
+                        {"label": "Uppsala", "value": "col2"},
                     ],
                     value="sepal width (cm)",
                 ),
@@ -133,9 +134,19 @@ controls = dbc.Card(
         ),
         dbc.FormGroup(
             [
-                dbc.Label("Worse scenario in different time"),
-                dbc.Button("Summer", id="summer_button", active=True, color="success", className="mr-1"),
-                dbc.Button("Winter", id="winter_button", color="primary", className="mr-1"),
+                dbc.Label("Check the capacity in different time"),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dbc.Button("Summer", id="summer_button", active=True, color="success", className="mr-1"),
+                            width={"size": 5},
+                        ),
+                        dbc.Col(
+                            dbc.Button("Winter", id="winter_button", color="primary", className="mr-1"),
+                            width={"size": 5},
+                        ),
+                    ]
+                ),
             ]
         ),
     ],
@@ -146,16 +157,6 @@ controls = dbc.Card(
 engineer_part = html.Div(
     [
         html.H1("Capacity Map with Dash component, for Time-series usage", style={'text-align': 'center'}),
-        dcc.Dropdown(id="slct_year",
-                     options=[
-                         {"label": "2015", "value": 2015},
-                         {"label": "2016", "value": 2016},
-                         {"label": "2017", "value": 2017},
-                         {"label": "2018", "value": 2018}],
-                     multi=False,
-                     value=2015,
-                     style={'width': "40%"}
-                     ),
 
         html.Br(),
 
@@ -202,8 +203,8 @@ app.layout = dbc.Container(
 @app.callback(
     Output("cluster-graph", "figure"),
     [
-        Input("x-variable", "value"),
-        Input("y-variable", "value"),
+        Input("capacity", "value"),
+        Input("location", "value"),
         Input("cluster-count", "value"),
         Input("summer_button", "n_clicks"),
         Input("winter_button", "n_clicks"),
@@ -233,14 +234,14 @@ def change_graph_input(x, y, n_clusters, summer_click, winter_click):
 @app.callback(
     [Output(component_id='output_container_slider', component_property='children'),
      Output(component_id='my_powerFlow_graph', component_property='figure')],
-    [Input(component_id='slct_year', component_property='value'),
-     Input(component_id='my-slider', component_property='value')]
+    [
+    #    Input(component_id='slct_year', component_property='value'),
+        Input(component_id='my-slider', component_property='value')
+    ]
 )
-def update_graph(option_slctd, slider_slctd):
-    print(option_slctd)
-    print(type(option_slctd))
+def update_graph(slider_slctd):
 
-    container = "The year chosen by user was: {}".format(option_slctd)
+    #container = "The year chosen by user was: {}".format(option_slctd)
     container_slider = "The time interval chosen by user was: {}".format(slider_slctd)
 
     fig_power = figures_eng[slider_slctd]
