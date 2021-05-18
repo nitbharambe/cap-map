@@ -67,6 +67,7 @@ sing_res function is for checking individual case analysis
 
 #sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
 #load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')
+# 要跑數據的時候要把這裡打開
 pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
 #pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')
 #pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
@@ -91,7 +92,7 @@ net.bus['cost']=np.random.randint(0,100,net.bus.shape[0])
 
 # extract time-series values
 networks_eng, figures_eng = viz.generate_graph_data_eng(net)
-figures_gen = viz.generate_graph_data_gen(networks_eng)
+figures_gen = viz.generate_graph_data_gen(networks_eng, 100)
 
 # take the correct order for slider
 list_length = len(networks_eng) - 1
@@ -102,11 +103,11 @@ controls = dbc.Card(
     [
         dbc.FormGroup(
             [
-                dbc.Label("Input 1"),
+                dbc.Label("Input for capacity"),
                 dcc.Dropdown(
                     id="x-variable",
                     options=[
-                        {"label": "col", "value": "col"}
+                        {"label": "5", "value": "5"}
                     ],
                     value="sepal length (cm)",
                 ),

@@ -213,7 +213,7 @@ def draw_traces_nograph(traces, on_map=False, map_style='basic', showlegend=True
 
 # Generating the plot for GENERAL users of the map
 
-def pf_res_plotly_gen(net, cmap="binary_r", use_line_geodata=None, on_map=False, projection=None,
+def pf_res_plotly_gen(net, capacity_limit, cmap="binary_r", use_line_geodata=None, on_map=False, projection=None,
                   map_style='basic', figsize=1, aspectratio='auto', line_width=2, bus_size=10,
                   climits_volt=(0.9, 1.1), climits_load=(0, 100), cpos_volt=1.0, cpos_load=1.1,
                   filename="temp-plot.html"):
@@ -307,8 +307,8 @@ def pf_res_plotly_gen(net, cmap="binary_r", use_line_geodata=None, on_map=False,
             
     hoverinfo = pd.Series(index=net.bus.index, data=hoverinfo)
 
-    bus_trace_less = create_bus_trace(net, net.bus[net.bus['max_load']<=50].index, size=bus_size, infofunc=hoverinfo, color='red')
-    bus_trace_more = create_bus_trace(net, net.bus[net.bus['max_load']>50].index, size=bus_size, infofunc=hoverinfo, color='blue')
+    bus_trace_less = create_bus_trace(net, net.bus[net.bus['max_load']<=capacity_limit].index, size=bus_size, infofunc=hoverinfo, color='red')
+    bus_trace_more = create_bus_trace(net, net.bus[net.bus['max_load']>capacity_limit].index, size=bus_size, infofunc=hoverinfo, color='blue')
 
     # ----- Lines ------
     # if bus geodata is available, but no line geodata
@@ -564,16 +564,17 @@ def generate_graph_data_eng(net):
 
 """ 
 
-Selecting the most important two graph for general users. The function needs to be revised later on for one more function to determine what is the graph we are going to show.
+Selecting the most important two graph for general users. 
+The function needs to be " revised " later on for one more function to determine what is the graph we are going to show.
 
 """
-def generate_graph_data_gen(networks_eng):
+def generate_graph_data_gen(networks_eng, capacity_limit):
     networks = networks_eng
     figures = [None]*2
-    
-    figures[0] = deepcopy(pf_res_plotly_gen(networks[5],map_style='dark'))
+
+    figures[0] = deepcopy(pf_res_plotly_gen(networks[5],capacity_limit,map_style='dark'))
     ''' Here the pf_res_plotly_eng is only for demo, it should be pf_res_plotly_gen just like the previous line '''
-    figures[1] = deepcopy(pf_res_plotly_eng(networks[90],map_style='dark'))
+    figures[1] = deepcopy(pf_res_plotly_gen(networks[90],capacity_limit,map_style='dark'))
        
     return figures
 
