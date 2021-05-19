@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# My note (Joe):
+# 1. fixed the graph function for general users (run through all the data)
+
 # ### 1. preprocessing the data
 
 # In[5]:
