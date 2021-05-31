@@ -88,17 +88,16 @@ net.bus['cost'] = np.random.randint(0, 100, net.bus.shape[0])
 
 #####################################################################
 ######################################################################
-# Following section requires executing any one timeseries case (to be used with pfa.sing_res later) above to generate the graph. (Already done)
-
-# extract time-series values
+'''
+    viz.generate_graph_data_xxx extracts time-series data from the calculation above and align
+them in a proper format for Dash.
+'''
 networks_eng, figures_eng = viz.generate_graph_data_eng(net)
 figures_gen = viz.generate_graph_data_gen(networks_eng, 40)
 
-# take the correct order for slider
 list_length = len(networks_eng) - 1
-# activate Dash
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
-# Dash component
+
 controls = dbc.Card(
     [
         dbc.FormGroup(
@@ -129,12 +128,6 @@ controls = dbc.Card(
         ),
         dbc.FormGroup(
             [
-                dbc.Label("Cluster count"),
-                dbc.Input(id="cluster-count", type="number", value=0),
-            ]
-        ),
-        dbc.FormGroup(
-            [
                 dbc.Label("Check the capacity in different time"),
                 dbc.Row(
                     [
@@ -153,8 +146,6 @@ controls = dbc.Card(
     ],
     body=True,
 )
-
-# the enginner part of the graph
 engineer_part = html.Div(
     [
         html.H1("Capacity Map with Dash component, for Time-series usage", style={'text-align': 'center'}),
@@ -179,8 +170,7 @@ engineer_part = html.Div(
         ),
     ]
 )
-
-# the place to set up layout
+# setting up layout
 app.layout = dbc.Container(
     [
         html.H1("Capacity Map with Dash component, for general usage", style={'text-align': 'center'}),
@@ -192,28 +182,22 @@ app.layout = dbc.Container(
             ],
             align="center",
         ),
-        # this is part is the engineer par
         engineer_part,
     ],
-    # fluid=True,
 )
 
 
-# callback functions can be align with multiple callbacks
 @app.callback(
     Output("cluster-graph", "figure"),
     [
         Input("capacity", "value"),
         Input("location", "value"),
-        #Input("cluster-count", "value"),
         Input("summer_button", "n_clicks"),
         Input("winter_button", "n_clicks"),
     ],
 )
-# Here insert the graph from pandapower, for beginner part
+# Here insert the graph from pandapower, for general usage
 def change_graph_input(x, y, summer_click, winter_click):
-    container = "The year chosen by user was: {}".format(x)
-    container_slider = "The time interval chosen by user was: {}".format(y)
     ctx = dash.callback_context
     count = ctx.triggered[0]['prop_id'].split('.')[0]
     if count == 'summer_button':
@@ -222,26 +206,18 @@ def change_graph_input(x, y, summer_click, winter_click):
         return figures_eng[1]
     return figures_gen[0]
 
-# From the following, the code is used for the second graph
 
-# Connect the Plotly graphs with Dash Components, Fro expert part
+# Here insert the graph from pandapower, for engineer usage
 @app.callback(
     [Output(component_id='output_container_slider', component_property='children'),
      Output(component_id='my_powerFlow_graph', component_property='figure')],
     [
-    #    Input(component_id='slct_year', component_property='value'),
         Input(component_id='my-slider', component_property='value')
     ]
 )
 def update_graph(slider_slctd):
-
-    #container = "The year chosen by user was: {}".format(option_slctd)
     container_slider = "The time interval chosen by user was: {}".format(slider_slctd)
-
     fig_power = figures_eng[slider_slctd]
-
-    # 上面的output對應到這邊的return，是按照順序的
-    # The output is correspoding to the return value below, by order
     return container_slider, fig_power
 
 
