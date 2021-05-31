@@ -1,0 +1,500 @@
+Index: cap_comb.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from cap import pfa\r\nfrom cap import viz\r\nimport simbench as sb\r\nimport numpy as np\r\nimport pandas as pd\r\n# for Dash import (might change Dash into a single function)\r\nimport dash  # (version 1.12.0) pip install dash\r\nimport dash_core_components as dcc\r\nimport dash_html_components as html\r\nfrom dash.dependencies import Input, Output\r\n\r\n### Input Grid\r\n\r\n'''\r\nInput grid for developing code is sb_code1\r\nsb_code2 is the larger grid to test the code\r\nInitial values of the loads and generation are stored\r\nMaximum voltage limits are relaxed for testing sample code since the limit gets violated for the test grid without adding any capacity\r\n'''\r\nsb_code1 = \"1-MV-rural--1-sw\"  # rural MV grid of scenario 0 with full switchs\r\nsb_code2 = \"1-HVMV-urban-all-0-sw\"  # urban hv grid with one connected mv grid which has the subnet 2.202\r\nnet = sb.get_simbench_net(sb_code1)\r\nnet.bus.max_vm_pu=net.bus.max_vm_pu*1.05\r\n\r\n### Other parameters\r\n\r\n'''\r\nMight put these inside .py file\r\ntime_steps:Set time steps in range for the timeseries module to compute over. \r\n    This parameter must be of same length as the length of profiles.\r\nll_p and ul_p : limits for maximum and minimum capacity that can be added to any bus\r\ninp_q: input reactive power for added capacity. Assumed constant\r\ntol: Search algorithm tolerance (in MW)\r\noutput_dir : Set directory for storing the logged varaiables. \r\n    Commented output_dir line is for setting directory in the temporary files of the computer.\r\now: Create the output writer object ow\r\n'''\r\ntime_steps=range(96)\r\nll_p=0\r\nul_p=90\r\ninp_q=0.1\r\ns_tol=0.005\r\n\r\now=pfa.define_log(net,time_steps)   #For logging variables\r\n\r\n### Input Parameters\r\n'''\r\nSample input. Use as needed\r\nprof and loadorgen are needed for getting the map\r\nOthers are needed in case of individual capacity checks\r\n'''\r\n#size_pmw=10\r\n#size_qmw=0.05\r\nloadorgen='sgen'\r\n#prof='L0-A'\r\nprof='WP4'\r\n#conn_at_bus=2\r\n\r\n## Get Map / PFA\r\n'''\r\nall_cap_map function takes lot of time to calculate capacities of an entire map. So they will be stored in an external file and read again in next section. Try using other inner functions to check if they work\r\nFunctions for finding maximum capacities\r\nThe all_cap_map function is max_cap looped for all busses so try below functions for quick results.\r\nsing_res function is for checking individual case analysis\r\n'''\r\n\r\n#sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')\r\n#load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')\r\npfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')\r\n#pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')\r\n#pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')\r\n\r\n## Visualisation\r\n\r\n'''\r\nLoad data from all cap here. Calculated and stored earlier for saving time  \r\n'''\r\nnet.load['max_load']=pd.read_csv(\"sampdata/samp_load_allcap.csv\")['max_add_cap']\r\nnet.sgen['max_sgen']=pd.read_csv(\"sampdata/samp_sgen_allcap.csv\")['max_add_cap']\r\n# Or we can also just initialize to random values\r\n#net.sgen['max_sgen']=np.random.randint(0,100,net.sgen.shape[0])\r\n#net.load['max_load']=np.random.randint(0,100,net.load.shape[0])\r\n\r\n\r\n#####################################################################\r\n######################################################################\r\n# Following section requires executing any one timeseries case (to be used with pfa.sing_res later) above to generate the graph. (Already done)\r\n\r\n# extract time-series values\r\nnetworks, figures = viz.generate_graph_data(net)\r\n\r\n# take the correct order for slider\r\nlist_length = len(networks)-1\r\n\r\napp = dash.Dash(__name__)\r\n\r\n# ------------------------------------------------------------------------------\r\n# App layout\r\napp.layout = html.Div([\r\n\r\n    html.H1(\"Capacity Map with Dash component Testing\", style={'text-align': 'center'}),\r\n\r\n    dcc.Dropdown(id=\"slct_year\",\r\n                 options=[\r\n                     {\"label\": \"2015\", \"value\": 2015},\r\n                     {\"label\": \"2016\", \"value\": 2016},\r\n                     {\"label\": \"2017\", \"value\": 2017},\r\n                     {\"label\": \"2018\", \"value\": 2018}],\r\n                 multi=False,\r\n                 value=2015,\r\n                 style={'width': \"40%\"}\r\n                 ),\r\n\r\n    html.Br(),\r\n\r\n    dcc.Graph(id='my_powerFlow_graph',\r\n              style={\r\n                  \"margin-left\": \"auto\",\r\n                  \"margin-right\": \"auto\",\r\n              },\r\n              figure={}),\r\n    html.Div(id='output_container_slider', children=[]),\r\n    html.Br(),\r\n\r\n    dcc.Slider(\r\n        id='my-slider',\r\n        min=0,\r\n        max=list_length,\r\n        step=1,\r\n        value=1,\r\n    ),\r\n\r\n],\r\n    # putting Style for the whole html.div block and it works!!!\r\nstyle={'width': '50%','padding-left':'25%', 'padding-right':'25%'},\r\n)\r\n\r\n\r\n# ------------------------------------------------------------------------------\r\n# Connect the Plotly graphs with Dash Components\r\n@app.callback(\r\n    [Output(component_id='output_container_slider', component_property='children'),\r\n     Output(component_id='my_powerFlow_graph', component_property='figure')],\r\n    [Input(component_id='slct_year', component_property='value'),\r\n     Input(component_id = 'my-slider',component_property='value')]\r\n)\r\ndef update_graph(option_slctd, slider_slctd):\r\n    print(option_slctd)\r\n    print(type(option_slctd))\r\n\r\n    container = \"The year chosen by user was: {}\".format(option_slctd)\r\n    container_slider = \"The time chosen by user was: {}\".format(slider_slctd)\r\n\r\n    fig_power = figures[slider_slctd]\r\n\r\n    # 上面的output對應到這邊的return，是按照順序的\r\n    # The output is correspoding to the return value below, by order\r\n    return container_slider, fig_power\r\n\r\n\r\nif __name__ == '__main__':\r\n    app.run_server(debug=True,use_reloader=False,port=3004)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cap_comb.py b/cap_comb.py
+--- a/cap_comb.py	
++++ b/cap_comb.py	
+@@ -20,8 +20,8 @@
+ sb_code1 = "1-MV-rural--1-sw"  # rural MV grid of scenario 0 with full switchs
+ sb_code2 = "1-HVMV-urban-all-0-sw"  # urban hv grid with one connected mv grid which has the subnet 2.202
+ net = sb.get_simbench_net(sb_code1)
+-net.bus.max_vm_pu=net.bus.max_vm_pu*1.05
+-
++net.bus.max_vm_pu=net.bus.max_vm_pu*1.03
++net = pfa.resample_profiles_months(net, month=6)
+ ### Other parameters
+ 
+ '''
+@@ -35,7 +35,7 @@
+     Commented output_dir line is for setting directory in the temporary files of the computer.
+ ow: Create the output writer object ow
+ '''
+-time_steps=range(96)
++time_steps=range(24)
+ ll_p=0
+ ul_p=90
+ inp_q=0.1
+@@ -64,9 +64,9 @@
+ sing_res function is for checking individual case analysis
+ '''
+ 
+-#sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
++sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
+ #load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')
+-pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
++#pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
+ #pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')
+ #pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
+ 
+@@ -75,8 +75,8 @@
+ '''
+ Load data from all cap here. Calculated and stored earlier for saving time  
+ '''
+-net.load['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
+-net.sgen['max_sgen']=pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
++net.load['max_load'] = pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
++net.sgen['max_sgen'] = pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
+ # Or we can also just initialize to random values
+ #net.sgen['max_sgen']=np.random.randint(0,100,net.sgen.shape[0])
+ #net.load['max_load']=np.random.randint(0,100,net.load.shape[0])
+@@ -86,77 +86,33 @@
+ ######################################################################
+ # Following section requires executing any one timeseries case (to be used with pfa.sing_res later) above to generate the graph. (Already done)
+ 
+-# extract time-series values
+-networks, figures = viz.generate_graph_data(net)
+-
+-# take the correct order for slider
+-list_length = len(networks)-1
+-
+-app = dash.Dash(__name__)
+-
+-# ------------------------------------------------------------------------------
+-# App layout
+-app.layout = html.Div([
++##################
++######################
+ 
+-    html.H1("Capacity Map with Dash component Testing", style={'text-align': 'center'}),
+ 
+-    dcc.Dropdown(id="slct_year",
+-                 options=[
+-                     {"label": "2015", "value": 2015},
+-                     {"label": "2016", "value": 2016},
+-                     {"label": "2017", "value": 2017},
+-                     {"label": "2018", "value": 2018}],
+-                 multi=False,
+-                 value=2015,
+-                 style={'width': "40%"}
+-                 ),
++# for mw in range(0,cap_step*4000,cap_step):
+ 
+-    html.Br(),
++#profiles1 = pfa.get_profiles(net, new_cap_name=loadorgen)
++#profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
++#profiles_s = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+ 
+-    dcc.Graph(id='my_powerFlow_graph',
+-              style={
+-                  "margin-left": "auto",
+-                  "margin-right": "auto",
+-              },
+-              figure={}),
+-    html.Div(id='output_container_slider', children=[]),
+-    html.Br(),
++#sb.apply_const_controllers(net, profiles1)  # create timeseries data from profiles and run powerflow
+ 
+-    dcc.Slider(
+-        id='my-slider',
+-        min=0,
+-        max=list_length,
+-        step=1,
+-        value=1,
+-    ),
++#violation_at_step = run_timeseries_mod(net, continue_on_divergence=True, verbose=True)
++#run_timeseries_mod(net, time_steps=range(5), continue_on_divergence=True, verbose=True)
++#x=pfa.feas_chk_test(net, ow=ow, conn_at_bus=98, loadorgen='sgen', size_p=1, size_q=1, prof='WP4')
++#print('   '+str(x))
++#print(violation_at_step)
+ 
+-],
+-    # putting Style for the whole html.div block and it works!!!
+-style={'width': '50%','padding-left':'25%', 'padding-right':'25%'},
+-)
+ 
++#all_cap_wp4 = pfa.all_cap_new(net,loadorgen='sgen', prof='WP4')
++#print(all_cap_wp4)
+ 
+-# ------------------------------------------------------------------------------
+-# Connect the Plotly graphs with Dash Components
+-@app.callback(
+-    [Output(component_id='output_container_slider', component_property='children'),
+-     Output(component_id='my_powerFlow_graph', component_property='figure')],
+-    [Input(component_id='slct_year', component_property='value'),
+-     Input(component_id = 'my-slider',component_property='value')]
+-)
+-def update_graph(option_slctd, slider_slctd):
+-    print(option_slctd)
+-    print(type(option_slctd))
++#pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
++#net.line.loc[0, "in_service"] = False
++#pfa.feas_chk(net, ow=ow, conn_at_bus=92, loadorgen='sgen', size_p=100, size_q=0.1, prof='WP4')
+ 
+-    container = "The year chosen by user was: {}".format(option_slctd)
+-    container_slider = "The time chosen by user was: {}".format(slider_slctd)
+-
+-    fig_power = figures[slider_slctd]
+-
+-    # 上面的output對應到這邊的return，是按照順序的
+-    # The output is correspoding to the return value below, by order
+-    return container_slider, fig_power
+-
+-
+-if __name__ == '__main__':
+-    app.run_server(debug=True,use_reloader=False,port=3004)
+\ No newline at end of file
++#networks, figures = viz.generate_graph_data(net)
++print(sgen_allcap.tail(10))
++sgen_allcap.to_csv('D:/College Documents/IIP/allcap.csv')
++print("breakpoint")
+\ No newline at end of file
+Index: cap/pfa.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\"\"\"\r\nCode to be refined a lot later on\r\nTODO: Add default values of all functions\r\n\"\"\"\r\n\r\n# Import the pandapower and the networks module:\r\nimport pandapower as pp\r\nimport simbench as sb\r\nimport pandas as pd\r\nimport numpy as np\r\nimport os\r\nimport tempfile\r\nfrom pandapower.timeseries import OutputWriter\r\nfrom pandapower.timeseries.run_time_series import run_timeseries\r\n\r\n\r\ndef get_init_all(net):\r\n    \"\"\"\r\n    Returns initialization data for net\r\n    INPUT:\r\n        net : pandapower net\r\n    OUTPUT:\r\n        tuple of initial load, initial generation\r\n    \"\"\"\r\n    initload = net.load[['p_mw', 'q_mvar']]\r\n    initsgen = net.sgen[['p_mw', 'q_mvar']]\r\n    return initload, initsgen\r\n\r\n\r\ndef init_net(net, init_all):\r\n    \"\"\"\r\n    Drops any added load/generation Initialization of load and generation p_mw and q_mvar is needed because the\r\n    run_timeseries replaces them after every iteration Drops Constcontrol objects created by sb.apply_cost_controllers\r\n\r\n    OUTPUT -\r\n        net- Pandapower network with initial values\r\n    \"\"\"\r\n    [initload, initsgen] = init_all\r\n    net.load = net.load.head(len(initload))\r\n    net.sgen = net.sgen.head(len(initsgen))\r\n    net.load[['p_mw', 'q_mvar']] = initload\r\n    net.sgen[['p_mw', 'q_mvar']] = initsgen\r\n    net.controller = net.controller.iloc[0:0]\r\n    return net\r\n\r\n\r\ndef define_log(net, time_steps):\r\n    \"\"\"\r\n    Creates output writer object required for timeseries simulation\r\n    The timeseries module only calculates the values of variables mentioned here for each simulation.\r\n    The temporary data gets stored in the output_dir directory\r\n\r\n    OUTPUT\r\n        ow - Output writer object\r\n    \"\"\"\r\n    ow = OutputWriter(net, time_steps, output_path=output_dir, output_file_type=\".json\")\r\n    ow.log_variable('res_bus', 'vm_pu')\r\n    ow.log_variable('res_line', 'loading_percent')\r\n    ow.log_variable('res_trafo', 'loading_percent')\r\n    return ow\r\n\r\n\r\ndef add_loadgen(net_t, loadorgen, conn_at_bus, size_p, size_q, prof):\r\n    \"\"\"\r\n    Adds a load or generation to the net.load or net.sgen table.\r\n    Adds profile name to the profiles variable of the newly addded capacity.\r\n\r\n    INPUT\r\n        net_t (PP net) - Pandapower net\r\n        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected\r\n        conn_at_bus (int) - Bus at which additional capacity is connected\r\n        prof (str) - Name of the profile. Must be available in the net.profiles of the input grid\r\n\r\n    OUTPUT\r\n        net_t (PP net) - Updated Pandapower net\r\n\r\n    \"\"\"\r\n    if loadorgen == \"load\":\r\n        pp.create_load(net_t, conn_at_bus, p_mw=size_p, q_mvar=size_q)\r\n        net_t.load.tail(1).profile = prof\r\n    elif loadorgen == \"sgen\":\r\n        pp.create_sgen(net_t, conn_at_bus, p_mw=size_p, q_mvar=size_q)\r\n        net_t.sgen.tail(1).profile = prof\r\n    else:\r\n        return 0\r\n    return net_t\r\n\r\n\r\ndef load_files():\r\n    \"\"\"\r\n    Loads files of previous TS simulation\r\n\r\n    OUTPUT\r\n        vm_pu,line_load,trafo_load (tuple) - Previous results of timeseries\r\n    \"\"\"\r\n    vm_pu_file = os.path.join(output_dir, \"res_bus\", \"vm_pu.json\")\r\n    vm_pu = pd.read_json(vm_pu_file)\r\n    line_load_file = os.path.join(output_dir, \"res_line\", \"loading_percent.json\")\r\n    line_load = pd.read_json(line_load_file)\r\n    trafo_load_file = os.path.join(output_dir, \"res_trafo\", \"loading_percent.json\")\r\n    trafo_load = pd.read_json(trafo_load_file)\r\n    return vm_pu, line_load, trafo_load\r\n\r\n\r\ndef violations_long(net):\r\n    \"\"\"\r\n    Checks for any violations created in the grid by additional capacity and returns tuple with the details Loads the\r\n    files created by timeseries simulation. Compares simulation values against the limits mentioned in the input grid.\r\n\r\n    INPUT\r\n        net (PP net) - Pandapower net\r\n\r\n    OUTPUT\r\n        check (bool) - tuple of violations with details\r\n\r\n    \"\"\"\r\n    [vm_pu, line_load, trafo_load] = load_files()\r\n\r\n    pf_vm_extremes = pd.DataFrame(vm_pu.max())\r\n    pf_vm_extremes.columns = ['pf_max_vm_pu']\r\n    pf_vm_extremes['pf_min_vm_pu'] = vm_pu.min()\r\n    vm_pu_check = net.bus[['name', 'vn_kv', 'min_vm_pu', 'max_vm_pu']].join(pf_vm_extremes)\r\n    vm_pu_check = vm_pu_check[\r\n        (vm_pu_check.pf_max_vm_pu > vm_pu_check.max_vm_pu) | (vm_pu_check.pf_min_vm_pu < vm_pu_check.min_vm_pu)]\r\n\r\n    pf_line_extremes = pd.DataFrame(line_load.max())\r\n    pf_line_extremes.columns = ['pf_max_loading_percent']\r\n    line_load_check = net.line[['name', 'from_bus', 'to_bus', 'max_loading_percent']].join(pf_line_extremes)\r\n    line_load_check = line_load_check[(line_load_check.pf_max_loading_percent > line_load_check.max_loading_percent)]\r\n\r\n    pf_trafo_extremes = pd.DataFrame(trafo_load.max())\r\n    pf_trafo_extremes.columns = ['pf_max_loading_percent']\r\n    trafo_load_check = net.trafo[['name', 'sn_mva', 'max_loading_percent']].join(pf_trafo_extremes)\r\n    trafo_load_check = trafo_load_check[\r\n        (trafo_load_check.pf_max_loading_percent > trafo_load_check.max_loading_percent)]\r\n\r\n    return vm_pu_check, line_load_check, trafo_load_check\r\n\r\n\r\ndef violations(net):\r\n    \"\"\"\r\n    Checks for any violations created in the grid by additional capacity. Loads the files created by timeseries\r\n    simulation. Compares simulation values against the limits mentioned in the input grid.\r\n\r\n    INPUT\r\n        net (PP net) - Pandapower net\r\n\r\n    OUTPUT\r\n        check (bool) - 'True' for no violations. 'False' for violations present\r\n\r\n    \"\"\"\r\n    [vm_pu, line_load, trafo_load] = load_files()\r\n\r\n    check = any(np.where(vm_pu.max() > net.bus['max_vm_pu'], True, False))\r\n    check = check or any(np.where(vm_pu.min() < net.bus['min_vm_pu'], True, False))\r\n    check = check or any(np.where(line_load.max() > net.line['max_loading_percent'], True, False))\r\n    check = check or any(np.where(trafo_load.max() > net.trafo['max_loading_percent'], True, False))\r\n    return not check\r\n\r\n\r\ndef feas_chk(net, ow, conn_at_bus, loadorgen, size_p, size_q, prof):\r\n    \"\"\"\r\n    Initializes the PPnet,\r\n    Adds additional capacity,\r\n    applies load/generation profiles on all the grid elements,\r\n    runs timeseries for the specific case and save the results in the temporary output directory,\r\n    Checks for violations\r\n\r\n    TODO: Need to check process of how profiles from simbench are actually getting applied to Constcontrol know the\r\n        fix. Also will lead to finding how profiles from input will be applied on the input grid.\r\n    TODO: suppress/workaround printing of individual progress bars\r\n\r\n    INPUT\r\n        net (PP net) - Pandapower net\r\n        ow (Object) - Output writer object\r\n        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected\r\n        conn_at_bus (int) - Bus at which additional capacity is connected\r\n        size_p (int) - Size of active power of additional capacity\r\n        size_q (int) - Size of reactive power of additional capacity\r\n        prof (str) - Name of the profile. Must be available in the net.profiles of the input grid\r\n\r\n    OUTPUT\r\n        feas_result (bool) - 'True' for feasible, 'False' for not feasible\r\n\r\n    \"\"\"\r\n    init_all = get_init_all(net)\r\n    net = add_loadgen(net, loadorgen, conn_at_bus, size_p, size_q, prof)\r\n    profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)\r\n    sb.apply_const_controllers(net, profiles)  # create timeseries data from profiles and run powerflow\r\n    run_timeseries(net, time_steps, continue_on_divergence=True, verbose=True)  # Run powerflow only over time_steps\r\n    feas_result = violations(net)\r\n    net = init_net(net, init_all)\r\n    return feas_result\r\n\r\n\r\ndef max_cap(net, ow, conn_at_bus, loadorgen, ul_p, ll_p, prof):\r\n    \"\"\"\r\n    Seach algorithm using feas_chk function over the range of ll_p and ul_p capacities\r\n\r\n    TODO: Speed up, if it is required, try changing ul_p and ll_p as per voltage levels\r\n\r\n    INPUT\r\n        net (PP net) - Pandapower net\r\n        ow (Object) - Output writer object\r\n        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected\r\n        conn_at_bus (int) - Bus at which additional capacity is connected\r\n        ll_p (int) - Size of maximum power limit of additional capacity that can be added\r\n        ul_p (int) - Size of minimum additional capacity that can be added (Set as 0)\r\n        prof (str) - Name of the profile. Must be available in the net.profiles of the input grid\r\n\r\n    OUTPUT\r\n         (int) - Maximum capacitiy of load/generation that can be added at given bus\r\n\r\n    \"\"\"\r\n    no_iter = 0\r\n    [ul_chk, mid_chk, ll_chk] = False, False, False\r\n    while not (((ul_p - ll_p) < s_tol) | (ul_chk & mid_chk) | (no_iter > 7)):\r\n        no_iter = no_iter + 1\r\n        mid_p = (ul_p + ll_p) / 2\r\n        ul_chk = feas_chk(net, ow, conn_at_bus, loadorgen, size_p=ul_p, size_q=inp_q, prof=prof)\r\n        mid_chk = feas_chk(net, ow, conn_at_bus, loadorgen, size_p=mid_p, size_q=inp_q, prof=prof)\r\n        if mid_chk:\r\n            ll_p = mid_p\r\n        elif not mid_chk:\r\n            ul_p = mid_p\r\n        elif ul_chk:\r\n            return ul_p\r\n    return ll_p\r\n\r\n\r\n'''\r\ndef printProgressBar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = \"\\r\"):\r\n    \"\"\"\r\n    https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console\r\n    \r\n    Call in a loop to create terminal progress bar\r\n    @params:\r\n        iteration   - Required  : current iteration (Int)\r\n        total       - Required  : total iterations (Int)\r\n        prefix      - Optional  : prefix string (Str)\r\n        suffix      - Optional  : suffix string (Str)\r\n        decimals    - Optional  : positive number of decimals in percent complete (Int)\r\n        length      - Optional  : character length of bar (Int)\r\n        fill        - Optional  : bar fill character (Str)\r\n        printEnd    - Optional  : end character (e.g. \"\\r\", \"\\r\\n\") (Str)\r\n    \"\"\"\r\n    percent = (\"{0:.\" + str(decimals) + \"f}\").format(100 * (iteration / float(total)))\r\n    filledLength = int(length * iteration // total)\r\n    bar = fill * filledLength + '-' * (length - filledLength)\r\n    print(f'\\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)\r\n    # Print New Line on Complete\r\n    if iteration == total: \r\n        print()\r\n'''\r\n\r\n\r\ndef printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):\r\n    \"\"\"\r\n    Call in a loop to create terminal progress bar.\r\n    the code is mentioned in : https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console\r\n    \"\"\"\r\n    percent = (\"{0:.\" + str(decimals) + \"f}\").format(100 * (iteration / float(total)))\r\n    filled_length = int(length * iteration // total)\r\n    bar = fill * filled_length + '-' * (length - filled_length)\r\n    # logger.info('\\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix))\r\n    print('\\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end=\"\")\r\n    # Print New Line on Complete\r\n    if iteration == total:\r\n        print(\"\\n\")\r\n\r\n\r\ndef all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):\r\n    \"\"\"\r\n    Iteratre the max_cap function over all busses in the grid.\r\n\r\n    TODO: Add progess bar\r\n\r\n    INPUT\r\n        net (PP net) - Pandapower net\r\n        ow (Object) - Output writer object\r\n        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected\r\n        ll_p (int) - Size of maximum power limit of additional capacity that can be added\r\n        ul_p (int) - Size of minimum additional capacity that can be added (Set as 0)\r\n        prof (str) - Name of the profile. Must be available in the net.profiles of the input grid\r\n\r\n    OUTPUT allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses\r\n    \"\"\"\r\n    len_items = len(net.bus)-96\r\n    items = list(range(0, len_items))\r\n    printProgressBar(0, len_items, prefix='Progress:', suffix='Complete', length=50)\r\n    allcap = net.bus[['name', 'vn_kv']]\r\n    allcap['max_add_cap'] = np.nan\r\n    allcap['lim_elm'] = np.nan\r\n    for i, conn_at_bus in enumerate(items):\r\n        max_cap_at_bus = max_cap(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen, ul_p=ul_p, ll_p=ll_p,\r\n                                 prof=prof)\r\n        allcap['max_add_cap'][conn_at_bus] = max_cap_at_bus\r\n        printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)\r\n    return allcap\r\n\r\n\r\ndef sing_res(net, ow, conn_at_bus, loadorgen, size_p, size_q, prof):\r\n    \"\"\"\r\n    Same as feas_chk. Only difference is that instead of returning bool it returns tuple with details of violations\r\n\r\n    BUG: More like pending to do. Doesnt work for loads. Need to check process of how profiles from simbench are actually\r\n    getting applied to Constcontrol know the fix. Also will lead to finding how profiles from input will be applied on\r\n    the input grid.\r\n    TODO: This function is incomplete. Hence returns 'True' for now.\r\n\r\n    INPUT\r\n        net (PP net) - Pandapower net\r\n        ow (Object) - Output writer object\r\n        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected\r\n        conn_at_bus (int) - Bus at which additional capacity is connected\r\n        size_p (int) - Size of active power of additional capacity\r\n        size_q (int) - Size of reactive power of additional capacity\r\n        prof (str) - Name of the profile. Must be available in the net.profiles of the input grid\r\n\r\n    OUTPUT\r\n        result (tuple) - violations details\r\n\r\n    \"\"\"\r\n    #return True\r\n    feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof)\r\n    return violations_long(net)\r\n\r\ndef lim_elm_calc():\r\n    allcap['lim_elm'][conn_at_bus] = sing_res(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen,\r\n                                              size_p=max_cap_at_bus + 2 * s_tol, size_q=0.1, prof=prof)\r\n\r\n\r\nll_p = 0\r\nul_p = 90\r\ninp_q = 0.1\r\ns_tol = 0.005\r\ntime_steps = range(96)\r\n\r\noutput_dir = os.path.join(tempfile.gettempdir(), \"simp_cap_v3\")\r\n# output_dir = os.path.join('C:\\\\Users\\\\nitbh\\\\OneDrive\\\\Documents\\\\IIPNB', \"simp_cap_v3\")\r\nif not os.path.exists(output_dir):\r\n    os.mkdir(output_dir)\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cap/pfa.py b/cap/pfa.py
+--- a/cap/pfa.py	
++++ b/cap/pfa.py	
+@@ -12,6 +12,8 @@
+ import tempfile
+ from pandapower.timeseries import OutputWriter
+ from pandapower.timeseries.run_time_series import run_timeseries
++from pandapowermod.timeseries.run_time_series_mod import run_timeseries_mod
++from pandapowermod.timeseries.run_time_series_mod1 import run_timeseries_mod1
+ 
+ 
+ def get_init_all(net):
+@@ -193,6 +195,22 @@
+     return feas_result
+ 
+ 
++def feas_chk_mod(net, ow, conn_at_bus, loadorgen, size_p, size_q, prof):
++    """
++    Modified run_timeseries of original function to directly give output of feas_result.
++    Everything else is similar
++    """
++
++    init_all = get_init_all(net)
++    net = add_loadgen(net, loadorgen, conn_at_bus, size_p, size_q, prof)
++    profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
++    sb.apply_const_controllers(net, profiles)  # create timeseries data from profiles and run powerflow
++    chk = not run_timeseries_mod(net, time_steps, continue_on_divergence=True, verbose=True)  # Run powerflow only over time_steps
++    #feas_result = violations(net)
++    net = init_net(net, init_all)
++    return chk
++
++
+ def max_cap(net, ow, conn_at_bus, loadorgen, ul_p, ll_p, prof):
+     """
+     Seach algorithm using feas_chk function over the range of ll_p and ul_p capacities
+@@ -217,8 +235,8 @@
+     while not (((ul_p - ll_p) < s_tol) | (ul_chk & mid_chk) | (no_iter > 7)):
+         no_iter = no_iter + 1
+         mid_p = (ul_p + ll_p) / 2
+-        ul_chk = feas_chk(net, ow, conn_at_bus, loadorgen, size_p=ul_p, size_q=inp_q, prof=prof)
+-        mid_chk = feas_chk(net, ow, conn_at_bus, loadorgen, size_p=mid_p, size_q=inp_q, prof=prof)
++        ul_chk = feas_chk_mod(net, ow, conn_at_bus, loadorgen, size_p=ul_p, size_q=inp_q, prof=prof)
++        mid_chk = feas_chk_mod(net, ow, conn_at_bus, loadorgen, size_p=mid_p, size_q=inp_q, prof=prof)
+         if mid_chk:
+             ll_p = mid_p
+         elif not mid_chk:
+@@ -285,17 +303,18 @@
+ 
+     OUTPUT allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses
+     """
+-    len_items = len(net.bus)-96
++    len_items = len(net.bus)
+     items = list(range(0, len_items))
+     printProgressBar(0, len_items, prefix='Progress:', suffix='Complete', length=50)
+     allcap = net.bus[['name', 'vn_kv']]
+-    allcap['max_add_cap'] = np.nan
+-    allcap['lim_elm'] = np.nan
++    allcap = allcap.join(pd.DataFrame(np.zeros([len(net.bus),len(net.line)])))
+     for i, conn_at_bus in enumerate(items):
+-        max_cap_at_bus = max_cap(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen, ul_p=ul_p, ll_p=ll_p,
++        for out_line in net.line.index:
++            net.line.loc[out_line, "in_service"] = False
++            allcap[out_line][conn_at_bus] = max_cap(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen, ul_p=ul_p, ll_p=ll_p,
+                                  prof=prof)
+-        allcap['max_add_cap'][conn_at_bus] = max_cap_at_bus
+-        printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)
++            net.line.loc[out_line, "in_service"] = True
++    printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)
+     return allcap
+ 
+ 
+@@ -325,16 +344,166 @@
+     feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof)
+     return violations_long(net)
+ 
+-def lim_elm_calc():
+-    allcap['lim_elm'][conn_at_bus] = sing_res(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen,
+-                                              size_p=max_cap_at_bus + 2 * s_tol, size_q=0.1, prof=prof)
++
++
++def resample_profiles(net, freq='H' ,head_values=96):
++    """
++    Function for selecting only first head_values elements of profiles included in net.profiles and resampling them.
++    resample_profiles_month function is a better alternative.
++    Not used anywhere, but saved for utility.
++
++    INPUT
++        net (PP net) - Pandapower net
++        freq (str) - frequency of resampling
++        head_values (int) - initial values to select
++
++    OUTPUT
++        net (PP net) - Updated pandapower net
++    """
++    for elm in net.profiles.keys():
++        net.profiles[elm] = net.profiles[elm].head(head_values)
++        net.profiles[elm].index = pd.to_datetime(
++            net.profiles[elm].time)  # pd.date_range(start='1/1/2021',freq='H',periods=len(net.profiles['load']))
++        # net.profiles[elm].drop('time', axis=1, inplace=True)
++        if all(net.profiles[elm].columns == 'time'):
++            net.profiles[elm] = net.profiles[elm].resample(freq).sum()
++        else:
++            net.profiles[elm] = net.profiles[elm].resample(freq).mean()
++    return net
++
++def resample_profiles_months(net, month=6):
++    """
++    Function for resampling data of profiles stored in net.profiles into hours for a specific month
++    INPUT
++        net (PP net) - Pandapower net
++        month (int) - Month number
++
++    OUTPUT
++        net (PP net) - Updated pandapower net
++    """
++    for elm in net.profiles.keys():
++        #net.profiles[elm] = net.profiles[elm].groupby()
++        net.profiles[elm].index = pd.to_datetime(net.profiles[elm].time, dayfirst=True )
++        # pd.date_range(start='1/1/2021',freq='H',periods=len(net.profiles['load']))
++        # net.profiles[elm].drop('time', axis=1, inplace=True)
++        net.profiles[elm] = net.profiles[elm][net.profiles[elm].index.month == month]
++        if all(net.profiles[elm].columns == 'time'):
++            net.profiles[elm] = net.profiles[elm].groupby(net.profiles[elm].index.hour).sum()
++        else:
++            net.profiles[elm] = net.profiles[elm].groupby(net.profiles[elm].index.hour).mean()
++        #net.profiles[elm].index = pd.to_datetime(net.profiles[elm].index)
++
++
++    return net
++
++def get_profiles(net, new_cap_name, cap_steps=4000, cap_step_size=0.05, pf=0.95,resample_freq='H'):
++    """
++    Sub function for other method of calculating capacity map. The other method involves modified run_timeseries
++    function of the pandapower repository. Instead of running in nested loops on a single day profile as the original
++    method, it joins cap_steps*cap_step_size profiles together. The timeseries of this profiles is interrupted midway
++    if violations are found.
++
++    INPUT
++        net (PP net) - Pandapower net
++        new_cap_name (str) - loadorgen for capacity to be checked at a given bus
++        cap_steps (int) - Total number of profiles to be joined together.
++        cap_step_size (int) - Incremental size of loadorgen for each profiles of cap_steps to be joined
++
++    OUTPUT
++        profiles (tuple) - The profiles tuple which can be applied to pandapower run_timeseries controller.
++    """
++    length_of_profiles = len(net.profiles['load'])
++    profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
++    # profiles=[profile[type]*0.05 for type in profiles]
++    for type in profiles:
++        profiles[type] = pd.concat([profiles[type]] * cap_steps)
++        profiles[type].index = pd.date_range(profiles[type].index[0], periods=len(profiles[type]), freq=resample_freq)
++    df = pd.Series(range(length_of_profiles * cap_steps))
++    df1 = pd.Series(range(length_of_profiles))
++    df_add = ((df - pd.concat([df1] * cap_steps, ignore_index=True)) * cap_step_size / length_of_profiles)
++    if new_cap_name == 'load':
++        df_add.index = profiles['load', 'p_mw'].index
++        profiles['load', 'p_mw'].iloc[:, -1] *= df_add
++        profiles['load', 'q_mw'].iloc[:, -1] *= df_add * ((1- pf*pf)**0.5)
++    elif new_cap_name == 'sgen':
++        df_add.index = profiles['sgen', 'p_mw'].index
++        profiles['sgen', 'p_mw'].iloc[:, -1] *= df_add
++    for elm in profiles:
++        profiles[elm].reset_index(inplace=True, drop=True)
++    return profiles
++
++
++def max_cap_map_new(net, loadorgen, conn_at_bus, prof, cap_steps=4000, cap_step_size=0.05, resample_freq='H', head_values_profiles=96):
++    """
++    Calculate Max capacity of loadorgen at a given bus by the second method described in get_profiles
++
++    INPUT
++        net (PP net) - Pandapower net
++        loadorgen (str) - 'sgen' or 'load' for generation or load for additional capacity connected
++        conn_at_bus (int) - Bus at which additional capacity is connected
++        prof (str) - Name of the profile. Must be available in the net.profiles of the input grid
++        cap_steps (int) - Total number of profiles to be joined together.
++        cap_step_size (int) - Incremental size of loadorgen for each profiles of cap_steps to be joined
++        resample_freq (str) - frequency for resampling profiles
++
++    OUTPUT
++        max_calc (int) - Maximum capacitiy of load/generation that can be added at given bus
++
++    """
++
++    elm_day = pd.Timedelta('1D') / pd.Timedelta(str(1) + resample_freq)
++    init_all = get_init_all(net)
++    net = add_loadgen(net, loadorgen, conn_at_bus=conn_at_bus, prof=prof, size_p=1, size_q=1)
++    #net=resample_profiles(net, freq=resample_freq, head_values=head_values_profiles)
++    profiles = get_profiles(net, new_cap_name=loadorgen, cap_steps=cap_steps, cap_step_size=cap_step_size, resample_freq=resample_freq)
++    sb.apply_const_controllers(net, profiles)  # create timeseries data from profiles and run powerflow
++    violation_at_step = run_timeseries_mod(net, continue_on_divergence=False,
++                                          verbose=True)  # Run powerflow only over time_steps
++    net=init_net(net, init_all)
++    max_calc = (violation_at_step - violation_at_step % elm_day) * cap_step_size / elm_day
++    return max_calc
++
++
++def max_cap_map_new_cont(net, loadorgen, conn_at_bus, prof, cap_steps=100, cap_step_size=0.1, resample_freq='H', head_values_profiles=96):
++    """
++    Same as max_cap_new but with contingency calculation
++    """
++    elm_day = pd.Timedelta('1D') / pd.Timedelta(str(1) + resample_freq)
++    min_violation_step=elm_day*cap_steps
++    for out_line in net.line.index:
++        net.line.loc[out_line, "in_service"] = False
++        init_all = get_init_all(net)
++        net = add_loadgen(net, loadorgen, conn_at_bus=conn_at_bus, prof=prof, size_p=1, size_q=1)
++        #net=resample_profiles(net, freq=resample_freq, head_values=head_values_profiles)
++        profiles = get_profiles(net, new_cap_name=loadorgen, cap_steps=cap_steps, cap_step_size=cap_step_size, resample_freq=resample_freq)
++        sb.apply_const_controllers(net, profiles)  # create timeseries data from profiles and run powerflow
++        violation_at_step = run_timeseries_mod(net, continue_on_divergence=False,
++                                              verbose=True)  # Run powerflow only over time_steps
++        net = init_net(net, init_all)
++        if violation_at_step < min_violation_step:
++            min_violation_step = violation_at_step
++        net.line.loc[out_line, "in_service"] = True
++    return (min_violation_step - min_violation_step % elm_day) * cap_step_size / elm_day
++
++
++def all_cap_new(net,loadorgen,prof):
++    """
++    Looping over all busses
++    """
++    allcap = net.bus[['name', 'vn_kv']]
++    col_name = 'max_add_'+loadorgen
++    allcap[col_name] = np.nan
++    for i in range(len(net.bus)):
++        allcap[col_name][i] = max_cap_map_new_cont(net, conn_at_bus=i, loadorgen=loadorgen, prof=prof)
++    return allcap
++
+ 
+ 
+ ll_p = 0
+ ul_p = 90
+ inp_q = 0.1
+ s_tol = 0.005
+-time_steps = range(96)
++time_steps = range(24)
+ 
+ output_dir = os.path.join(tempfile.gettempdir(), "simp_cap_v3")
+ # output_dir = os.path.join('C:\\Users\\nitbh\\OneDrive\\Documents\\IIPNB', "simp_cap_v3")
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"710cff92-6522-4a5b-b421-90a4e8d4e451\" name=\"Default Changelist\" comment=\"Added .py file along with map from joe\">\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/cap_comb.py\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/cap_comb.py\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Python Script\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"FlaskConsoleOptions\" custom-start-script=\"import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\\nApp: %s [%s]\\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))\">\r\n    <envs>\r\n      <env key=\"FLASK_APP\" value=\"app\" />\r\n    </envs>\r\n    <option name=\"myCustomStartScript\" value=\"import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\\nApp: %s [%s]\\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))\" />\r\n    <option name=\"myEnvs\">\r\n      <map>\r\n        <entry key=\"FLASK_APP\" value=\"app\" />\r\n      </map>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"ProjectId\" id=\"1q1JM93pNedTSQL4YpobeftfWM4\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\">\r\n    <property name=\"RunOnceActivity.OpenProjectViewOnStart\" value=\"true\" />\r\n    <property name=\"RunOnceActivity.ShowReadmeOnStart\" value=\"true\" />\r\n    <property name=\"WebServerToolWindowFactoryState\" value=\"false\" />\r\n    <property name=\"last_opened_file_path\" value=\"$PROJECT_DIR$/../cap-map-main\" />\r\n    <property name=\"settings.editor.selected.configurable\" value=\"com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable\" />\r\n  </component>\r\n  <component name=\"RunManager\">\r\n    <configuration name=\"cap_comb\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"cap-map\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"true\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <EXTENSION ID=\"PythonCoverageRunConfigurationExtension\" runner=\"coverage.py\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/cap_comb.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <recent_temporary>\r\n      <list>\r\n        <item itemvalue=\"Python.cap_comb\" />\r\n      </list>\r\n    </recent_temporary>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"710cff92-6522-4a5b-b421-90a4e8d4e451\" name=\"Default Changelist\" comment=\"\" />\r\n      <created>1616241111635</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1616241111635</updated>\r\n      <workItem from=\"1616241114603\" duration=\"3083000\" />\r\n      <workItem from=\"1616442592511\" duration=\"217000\" />\r\n      <workItem from=\"1616442998541\" duration=\"5356000\" />\r\n      <workItem from=\"1616457289744\" duration=\"6014000\" />\r\n      <workItem from=\"1616542118611\" duration=\"1294000\" />\r\n      <workItem from=\"1617029325339\" duration=\"1708000\" />\r\n      <workItem from=\"1617051185921\" duration=\"3715000\" />\r\n    </task>\r\n    <task id=\"LOCAL-00001\" summary=\"Change output_dir, add results from csv\">\r\n      <created>1616456769405</created>\r\n      <option name=\"number\" value=\"00001\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00001\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1616456769405</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00002\" summary=\"Change output_dir, add results from csv\">\r\n      <created>1616456841285</created>\r\n      <option name=\"number\" value=\"00002\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00002\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1616456841285</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00003\" summary=\"Fix some issues\">\r\n      <created>1616461358999</created>\r\n      <option name=\"number\" value=\"00003\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00003\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1616461358999</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00004\" summary=\"Fix some issues\">\r\n      <created>1616497873173</created>\r\n      <option name=\"number\" value=\"00004\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00004\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1616497873173</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00005\" summary=\"Added .py file along with map from joe\">\r\n      <created>1617062189388</created>\r\n      <option name=\"number\" value=\"00005\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00005\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1617062189388</updated>\r\n    </task>\r\n    <option name=\"localTasksCounter\" value=\"6\" />\r\n    <servers />\r\n  </component>\r\n  <component name=\"TypeScriptGeneratedFilesManager\">\r\n    <option name=\"version\" value=\"3\" />\r\n  </component>\r\n  <component name=\"Vcs.Log.Tabs.Properties\">\r\n    <option name=\"TAB_STATES\">\r\n      <map>\r\n        <entry key=\"MAIN\">\r\n          <value>\r\n            <State>\r\n              <option name=\"FILTERS\">\r\n                <map>\r\n                  <entry key=\"branch\">\r\n                    <value>\r\n                      <list>\r\n                        <option value=\"origin/main\" />\r\n                      </list>\r\n                    </value>\r\n                  </entry>\r\n                </map>\r\n              </option>\r\n            </State>\r\n          </value>\r\n        </entry>\r\n      </map>\r\n    </option>\r\n    <option name=\"oldMeFiltersMigrated\" value=\"true\" />\r\n  </component>\r\n  <component name=\"VcsManagerConfiguration\">\r\n    <MESSAGE value=\"Change output_dir, add results from csv\" />\r\n    <MESSAGE value=\"Fix some issues\" />\r\n    <MESSAGE value=\"Added .py file along with map from joe\" />\r\n    <option name=\"LAST_COMMIT_MESSAGE\" value=\"Added .py file along with map from joe\" />\r\n  </component>\r\n  <component name=\"com.intellij.coverage.CoverageDataManagerImpl\">\r\n    <SUITE FILE_PATH=\"coverage/cap_map$cap_comb.coverage\" NAME=\"cap_comb Coverage Results\" MODIFIED=\"1617061966686\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"true\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	
++++ b/.idea/workspace.xml	
+@@ -3,6 +3,8 @@
+   <component name="ChangeListManager">
+     <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="Added .py file along with map from joe">
+       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/cap/pfa.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap/pfa.py" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/cap/viz.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap/viz.py" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/cap_comb.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap_comb.py" afterDir="false" />
+     </list>
+     <option name="SHOW_DIALOG" value="false" />
+@@ -42,6 +44,12 @@
+     <property name="WebServerToolWindowFactoryState" value="false" />
+     <property name="last_opened_file_path" value="$PROJECT_DIR$/../cap-map-main" />
+     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
++  </component>
++  <component name="RecentsManager">
++    <key name="CopyFile.RECENT_KEYS">
++      <recent name="C:\Users\nitbh\OneDrive\Documents\repository\cap-map-back\" />
++      <recent name="C:\Users\nitbh\OneDrive\Documents\repository\cap-map-back\cap" />
++    </key>
+   </component>
+   <component name="RunManager">
+     <configuration name="cap_comb" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+@@ -87,6 +95,12 @@
+       <workItem from="1616542118611" duration="1294000" />
+       <workItem from="1617029325339" duration="1708000" />
+       <workItem from="1617051185921" duration="3715000" />
++      <workItem from="1619128456937" duration="594000" />
++      <workItem from="1619185772051" duration="1803000" />
++      <workItem from="1620127177693" duration="57905000" />
++      <workItem from="1620990364037" duration="741000" />
++      <workItem from="1621441926122" duration="1271000" />
++      <workItem from="1621533118631" duration="7748000" />
+     </task>
+     <task id="LOCAL-00001" summary="Change output_dir, add results from csv">
+       <created>1616456769405</created>
+@@ -159,7 +173,49 @@
+     <MESSAGE value="Added .py file along with map from joe" />
+     <option name="LAST_COMMIT_MESSAGE" value="Added .py file along with map from joe" />
+   </component>
++  <component name="XDebuggerManager">
++    <breakpoint-manager>
++      <breakpoints>
++        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
++          <url>file://$PROJECT_DIR$/cap_comb.py</url>
++          <line>117</line>
++          <option name="timeStamp" value="44" />
++        </line-breakpoint>
++        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
++          <url>file://$PROJECT_DIR$/cap/viz.py</url>
++          <line>376</line>
++          <option name="timeStamp" value="49" />
++        </line-breakpoint>
++        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
++          <url>file://$PROJECT_DIR$/pandapowermod/plotting/plotly/pf_res_plotly.py</url>
++          <line>6</line>
++          <option name="timeStamp" value="53" />
++        </line-breakpoint>
++        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
++          <url>file://$PROJECT_DIR$/cap/pfa.py</url>
++          <line>479</line>
++          <option name="timeStamp" value="55" />
++        </line-breakpoint>
++        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
++          <url>file://$PROJECT_DIR$/cap_comb.py</url>
++          <line>115</line>
++          <option name="timeStamp" value="61" />
++        </line-breakpoint>
++        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
++          <url>file://$PROJECT_DIR$/cap_comb.py</url>
++          <line>23</line>
++          <option name="timeStamp" value="64" />
++        </line-breakpoint>
++      </breakpoints>
++    </breakpoint-manager>
++    <watches-manager>
++      <configuration name="PythonConfigurationType">
++        <watch expression="net.profiles" />
++      </configuration>
++    </watches-manager>
++  </component>
+   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+-    <SUITE FILE_PATH="coverage/cap_map$cap_comb.coverage" NAME="cap_comb Coverage Results" MODIFIED="1617061966686" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
++    <SUITE FILE_PATH="coverage/cap_map$test.coverage" NAME="test Coverage Results" MODIFIED="1617400844835" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
++    <SUITE FILE_PATH="coverage/cap_map$cap_comb.coverage" NAME="cap_comb Coverage Results" MODIFIED="1620814832982" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+   </component>
+ </project>
+\ No newline at end of file

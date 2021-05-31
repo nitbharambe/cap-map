@@ -1,0 +1,103 @@
+Index: cap_comb.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from cap import pfa\r\nfrom cap import viz\r\nimport simbench as sb\r\nimport numpy as np\r\nimport pandas as pd\r\n# for Dash import (might change Dash into a single function)\r\nimport dash  # (version 1.12.0) pip install dash\r\nimport dash_core_components as dcc\r\nimport dash_html_components as html\r\nfrom dash.dependencies import Input, Output\r\nimport dash_bootstrap_components as dbc\r\nimport plotly.graph_objs as go\r\n\r\n### Input Grid\r\n\r\n'''\r\nInput grid for developing code is sb_code1\r\nsb_code2 is the larger grid to test the code\r\nInitial values of the loads and generation are stored\r\nMaximum voltage limits are relaxed for testing sample code since the limit gets violated for the test grid without adding any capacity\r\n'''\r\nsb_code1 = \"1-MV-rural--1-sw\"  # rural MV grid of scenario 0 with full switchs\r\nsb_code2 = \"1-HVMV-urban-all-0-sw\"  # urban hv grid with one connected mv grid which has the subnet 2.202\r\nnet = sb.get_simbench_net(sb_code1)\r\nnet.bus.max_vm_pu = net.bus.max_vm_pu * 1.05\r\n\r\n### Other parameters\r\n\r\n'''\r\nMight put these inside .py file\r\ntime_steps:Set time steps in range for the timeseries module to compute over. \r\n    This parameter must be of same length as the length of profiles.\r\nll_p and ul_p : limits for maximum and minimum capacity that can be added to any bus\r\ninp_q: input reactive power for added capacity. Assumed constant\r\ntol: Search algorithm tolerance (in MW)\r\noutput_dir : Set directory for storing the logged varaiables. \r\n    Commented output_dir line is for setting directory in the temporary files of the computer.\r\now: Create the output writer object ow\r\n'''\r\ntime_steps = range(96)\r\nll_p = 0\r\nul_p = 90\r\ninp_q = 0.1\r\ns_tol = 0.005\r\n\r\now = pfa.define_log(net, time_steps)  # For logging variables\r\n\r\n### Input Parameters\r\n'''\r\nSample input. Use as needed\r\nprof and loadorgen are needed for getting the map\r\nOthers are needed in case of individual capacity checks\r\n'''\r\n# size_pmw=10\r\n# size_qmw=0.05\r\nloadorgen = 'sgen'\r\n# prof='L0-A'\r\nprof = 'WP4'\r\n# conn_at_bus=2\r\n\r\n## Get Map / PFA\r\n'''\r\nall_cap_map function takes lot of time to calculate capacities of an entire map. So they will be stored in an external file and read again in next section. Try using other inner functions to check if they work\r\nFunctions for finding maximum capacities\r\nThe all_cap_map function is max_cap looped for all busses so try below functions for quick results.\r\nsing_res function is for checking individual case analysis\r\n'''\r\n\r\n# sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')\r\n# load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')\r\n''' To generate the data, need to remove the comment of next line of code '''\r\npfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')\r\n# pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')\r\n# pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')\r\n\r\n## Visualisation\r\n\r\n'''\r\nLoad data from all cap here. Calculated and stored earlier for saving time  \r\n'''\r\n# net.load['max_load']=pd.read_csv(\"sampdata/samp_load_allcap.csv\")['max_add_cap']\r\nnet.sgen['max_sgen'] = pd.read_csv(\"sampdata/samp_sgen_allcap.csv\")['max_add_cap']\r\n# Or we can also just initialize to random values\r\n# net.sgen['max_sgen']=np.random.randint(0,100,net.sgen.shape[0])\r\n# net.load['max_load']=np.random.randint(0,100,net.load.shape[0])\r\nnet.bus['max_load'] = np.random.randint(0, 100, net.bus.shape[0])\r\nnet.bus['cost'] = np.random.randint(0, 100, net.bus.shape[0])\r\n\r\n#####################################################################\r\n######################################################################\r\n# Following section requires executing any one timeseries case (to be used with pfa.sing_res later) above to generate the graph. (Already done)\r\n\r\n# extract time-series values\r\nnetworks_eng, figures_eng = viz.generate_graph_data_eng(net)\r\nfigures_gen = viz.generate_graph_data_gen(networks_eng, 40)\r\n\r\n# take the correct order for slider\r\nlist_length = len(networks_eng) - 1\r\n# activate Dash\r\napp = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])\r\n# Dash component\r\ncontrols = dbc.Card(\r\n    [\r\n        dbc.FormGroup(\r\n            [\r\n                dbc.Label(\"Step1: Input capacity\"),\r\n                html.Br(),\r\n                dcc.Input(\r\n                    id=\"capacity\",\r\n                    type=\"number\",\r\n                    placeholder=\"Enter a capacity (MW)\",\r\n                ),\r\n            ]\r\n        ),\r\n        dbc.FormGroup(\r\n            [\r\n                dbc.Label(\"Step2: Select location\"),\r\n                dcc.Dropdown(\r\n                    id=\"location\",\r\n                    placeholder=\"Select a location\",\r\n                    options=[\r\n                        {\"label\": \"Stockholm\", \"value\": \"col\"},\r\n                        {\"label\": \"Uppsala\", \"value\": \"col2\"},\r\n                        {\"label\": \"Öland\", \"value\": \"col3\"},\r\n                    ],\r\n                    value=\"sepal width (cm)\",\r\n                ),\r\n            ]\r\n        ),\r\n        dbc.FormGroup(\r\n            [\r\n                dbc.Label(\"Cluster count\"),\r\n                dbc.Input(id=\"cluster-count\", type=\"number\", value=0),\r\n            ]\r\n        ),\r\n        dbc.FormGroup(\r\n            [\r\n                dbc.Label(\"Check the capacity in different time\"),\r\n                dbc.Row(\r\n                    [\r\n                        dbc.Col(\r\n                            dbc.Button(\"Summer\", id=\"summer_button\", active=True, color=\"success\", className=\"mr-1\"),\r\n                            width={\"size\": 5},\r\n                        ),\r\n                        dbc.Col(\r\n                            dbc.Button(\"Winter\", id=\"winter_button\", color=\"primary\", className=\"mr-1\"),\r\n                            width={\"size\": 5},\r\n                        ),\r\n                    ]\r\n                ),\r\n            ]\r\n        ),\r\n    ],\r\n    body=True,\r\n)\r\n\r\n# the enginner part of the graph\r\nengineer_part = html.Div(\r\n    [\r\n        html.H1(\"Capacity Map with Dash component, for Time-series usage\", style={'text-align': 'center'}),\r\n\r\n        html.Br(),\r\n\r\n        dcc.Graph(id='my_powerFlow_graph',\r\n                  style={\r\n                      \"margin-left\": \"auto\",\r\n                      \"margin-right\": \"auto\",\r\n                  },\r\n                  figure={}),\r\n        html.Div(id='output_container_slider', children=[]),\r\n        html.Br(),\r\n\r\n        dcc.Slider(\r\n            id='my-slider',\r\n            min=0,\r\n            max=list_length,\r\n            step=1,\r\n            value=0,\r\n        ),\r\n    ]\r\n)\r\n\r\n# the place to set up layout\r\napp.layout = dbc.Container(\r\n    [\r\n        html.H1(\"Capacity Map with Dash component, for general usage\", style={'text-align': 'center'}),\r\n        html.Br(),\r\n        dbc.Row(\r\n            [\r\n                dbc.Col(controls, md=4, align=\"start\"),\r\n                dbc.Col(dcc.Graph(id=\"cluster-graph\", figure={}), md=8),\r\n            ],\r\n            align=\"center\",\r\n        ),\r\n        # this is part is the engineer par\r\n        engineer_part,\r\n    ],\r\n    # fluid=True,\r\n)\r\n\r\n\r\n# callback functions can be align with multiple callbacks\r\n@app.callback(\r\n    Output(\"cluster-graph\", \"figure\"),\r\n    [\r\n        Input(\"capacity\", \"value\"),\r\n        Input(\"location\", \"value\"),\r\n        #Input(\"cluster-count\", \"value\"),\r\n        Input(\"summer_button\", \"n_clicks\"),\r\n        Input(\"winter_button\", \"n_clicks\"),\r\n    ],\r\n)\r\n# Here insert the graph from pandapower, for beginner part\r\ndef change_graph_input(x, y, summer_click, winter_click):\r\n    container = \"The year chosen by user was: {}\".format(x)\r\n    container_slider = \"The time interval chosen by user was: {}\".format(y)\r\n    ctx = dash.callback_context\r\n    count = ctx.triggered[0]['prop_id'].split('.')[0]\r\n    if count == 'summer_button':\r\n        return figures_gen[0]\r\n    elif count == 'winter_button':\r\n        return figures_eng[1]\r\n    return figures_gen[0]\r\n\r\n# From the following, the code is used for the second graph\r\n\r\n# Connect the Plotly graphs with Dash Components, Fro expert part\r\n@app.callback(\r\n    [Output(component_id='output_container_slider', component_property='children'),\r\n     Output(component_id='my_powerFlow_graph', component_property='figure')],\r\n    [\r\n    #    Input(component_id='slct_year', component_property='value'),\r\n        Input(component_id='my-slider', component_property='value')\r\n    ]\r\n)\r\ndef update_graph(slider_slctd):\r\n\r\n    #container = \"The year chosen by user was: {}\".format(option_slctd)\r\n    container_slider = \"The time interval chosen by user was: {}\".format(slider_slctd)\r\n\r\n    fig_power = figures_eng[slider_slctd]\r\n\r\n    # 上面的output對應到這邊的return，是按照順序的\r\n    # The output is correspoding to the return value below, by order\r\n    return container_slider, fig_power\r\n\r\n\r\nif __name__ == \"__main__\":\r\n    app.run_server(debug=False, port=3004)\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/cap_comb.py b/cap_comb.py
+--- a/cap_comb.py	
++++ b/cap_comb.py	
+@@ -1,7 +1,6 @@
+ from cap import pfa
+ from cap import viz
+ import simbench as sb
+-import numpy as np
+ import pandas as pd
+ # for Dash import (might change Dash into a single function)
+ import dash  # (version 1.12.0) pip install dash
+@@ -26,53 +25,28 @@
+ 
+ ### Other parameters
+ 
+-'''
+-Might put these inside .py file
+-time_steps:Set time steps in range for the timeseries module to compute over. 
+-    This parameter must be of same length as the length of profiles.
+-ll_p and ul_p : limits for maximum and minimum capacity that can be added to any bus
+-inp_q: input reactive power for added capacity. Assumed constant
+-tol: Search algorithm tolerance (in MW)
+-output_dir : Set directory for storing the logged varaiables. 
+-    Commented output_dir line is for setting directory in the temporary files of the computer.
+-ow: Create the output writer object ow
+-'''
+-time_steps = range(96)
+-ll_p = 0
+-ul_p = 90
+-inp_q = 0.1
+-s_tol = 0.005
+-
+ ow = pfa.define_log(net, time_steps)  # For logging variables
+ 
+-### Input Parameters
+-'''
+-Sample input. Use as needed
+-prof and loadorgen are needed for getting the map
+-Others are needed in case of individual capacity checks
+-'''
+-# size_pmw=10
+-# size_qmw=0.05
+-loadorgen = 'sgen'
+-# prof='L0-A'
+-prof = 'WP4'
+-# conn_at_bus=2
+-
+ ## Get Map / PFA
+ '''
++loadorgen: eg. 'load' , 'sgen'
++prof: eg. 'L0-A' , 'WP4'
+ all_cap_map function takes lot of time to calculate capacities of an entire map. So they will be stored in an external file and read again in next section. Try using other inner functions to check if they work
+ Functions for finding maximum capacities
+ The all_cap_map function is max_cap looped for all busses so try below functions for quick results.
+ sing_res function is for checking individual case analysis
+ '''
+ 
+-# sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
++net = pfa.resample_profiles_months(net, month=6)
++sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
+ # load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')
+-''' To generate the data, need to remove the comment of next line of code '''
+-pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
+-# pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')
++# One sample run is needed to initiate visualisation
++#pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
+ # pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
+ 
++#sgen_allcap.to_csv('D:/College Documents/IIP/allcap.csv')
++
++
+ ## Visualisation
+ 
+ '''
+@@ -80,11 +54,11 @@
+ '''
+ # net.load['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
+ net.sgen['max_sgen'] = pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
+-# Or we can also just initialize to random values
++# Or we can also just initialize to random values for testing
+ # net.sgen['max_sgen']=np.random.randint(0,100,net.sgen.shape[0])
+ # net.load['max_load']=np.random.randint(0,100,net.load.shape[0])
+-net.bus['max_load'] = np.random.randint(0, 100, net.bus.shape[0])
+-net.bus['cost'] = np.random.randint(0, 100, net.bus.shape[0])
++#net.bus['max_load'] = np.random.randint(0, 100, net.bus.shape[0])
++#net.bus['cost'] = np.random.randint(0, 100, net.bus.shape[0])
+ 
+ #####################################################################
+ ######################################################################
+@@ -246,4 +220,4 @@
+ 
+ 
+ if __name__ == "__main__":
+-    app.run_server(debug=False, port=3004)
++    app.run_server(debug=False, port=3004)
+\ No newline at end of file
