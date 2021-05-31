@@ -26,52 +26,25 @@ net.bus.max_vm_pu = net.bus.max_vm_pu * 1.05
 
 ### Other parameters
 
-'''
-Might put these inside .py file
-time_steps:Set time steps in range for the timeseries module to compute over. 
-    This parameter must be of same length as the length of profiles.
-ll_p and ul_p : limits for maximum and minimum capacity that can be added to any bus
-inp_q: input reactive power for added capacity. Assumed constant
-tol: Search algorithm tolerance (in MW)
-output_dir : Set directory for storing the logged varaiables. 
-    Commented output_dir line is for setting directory in the temporary files of the computer.
-ow: Create the output writer object ow
-'''
-time_steps = range(96)
-ll_p = 0
-ul_p = 90
-inp_q = 0.1
-s_tol = 0.005
-
 ow = pfa.define_log(net, time_steps)  # For logging variables
-
-### Input Parameters
-'''
-Sample input. Use as needed
-prof and loadorgen are needed for getting the map
-Others are needed in case of individual capacity checks
-'''
-# size_pmw=10
-# size_qmw=0.05
-loadorgen = 'sgen'
-# prof='L0-A'
-prof = 'WP4'
-# conn_at_bus=2
 
 ## Get Map / PFA
 '''
+loadorgen: eg. 'load' , 'sgen'
+prof: eg. 'L0-A' , 'WP4'
 all_cap_map function takes lot of time to calculate capacities of an entire map. So they will be stored in an external file and read again in next section. Try using other inner functions to check if they work
 Functions for finding maximum capacities
 The all_cap_map function is max_cap looped for all busses so try below functions for quick results.
 sing_res function is for checking individual case analysis
 '''
 
-# sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
+net = pfa.resample_profiles_months(net, month=6)
+sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
 # load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')
-''' To generate the data, need to remove the comment of next line of code '''
-pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
-# pfa.max_cap(net,ow=ow,conn_at_bus=95, loadorgen='load',ul_p=ul_p, ll_p=ll_p, prof='L0-A')
+# One sample run is needed to initiate visualisation
+#pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
 # pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
+
 
 ## Visualisation
 
@@ -80,18 +53,13 @@ Load data from all cap here. Calculated and stored earlier for saving time
 '''
 # net.load['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
 net.sgen['max_sgen'] = pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
-# Or we can also just initialize to random values
-# net.sgen['max_sgen']=np.random.randint(0,100,net.sgen.shape[0])
-# net.load['max_load']=np.random.randint(0,100,net.load.shape[0])
-net.bus['max_load'] = np.random.randint(0, 100, net.bus.shape[0])
-net.bus['cost'] = np.random.randint(0, 100, net.bus.shape[0])
+
 
 #####################################################################
 ######################################################################
-'''
-    viz.generate_graph_data_xxx extracts time-series data from the calculation above and align
-them in a proper format for Dash.
-'''
+# Following section requires executing any one timeseries case (to be used with pfa.sing_res later) above to generate the graph. (Already done)
+
+# extract time-series values
 networks_eng, figures_eng = viz.generate_graph_data_eng(net)
 figures_gen = viz.generate_graph_data_gen(networks_eng, 40)
 
