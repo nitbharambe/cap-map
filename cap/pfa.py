@@ -12,7 +12,7 @@ import os
 import tempfile
 from pandapower.timeseries import OutputWriter
 from pandapower.timeseries.run_time_series import run_timeseries
-from pandapowermod.timeseries.run_time_series_mod import run_timeseries_mod
+#from pandapowermod.timeseries.run_time_series_mod import run_timeseries_mod
 from pandapowermod.timeseries.run_time_series_mod1 import run_timeseries_mod1
 
 

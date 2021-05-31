@@ -1,46 +1,23 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# My note (Joe):
-# 1. fixed the graph function for general users (run through all the data)
-
-# ### 1. preprocessing the data
-
-# In[5]:
+"""
 
 
-# power flow package & python package ( edited by Joe )
+"""
+#Import the pandapower function and the dash components
 from cap import pfa
-import copy
-import pandas as pd
 
-# Dash import
+# Dash and pandapower import
 import pandas as pd
-import plotly.express as px  # (version 4.7.0)
-import plotly.graph_objects as go
-
 import dash  # (version 1.12.0) pip install dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 
-# panda package
-from pandapower.plotting.plotly import pf_res_plotly
-import numpy as np
-
 # for copy panda object
 from copy import deepcopy
 
 # for editing the draw_trace() function
-from pandapower.plotting.plotly import traces
 from pandapower.plotting.plotly.traces import _in_ipynb
 
-import math
-
-from packaging import version
-from collections.abc import Iterable
-
-from pandapower.plotting.plotly.get_colors import get_plotly_color, get_plotly_cmap
 from pandapower.plotting.plotly.mapbox_plot import _on_map_test, _get_mapbox_token,     MapboxTokenMissing
 
 try:
@@ -60,18 +37,17 @@ from pandapower.plotting.generic_geodata import create_generic_coordinates
 from pandapower.plotting.plotly.mapbox_plot import *
 from pandapower.plotting.plotly.traces import create_bus_trace, create_line_trace,     create_trafo_trace, draw_traces, version_check
 from pandapower.run import runpp
- 
+
 try:
     import pplog as logging
 except ImportError:
     import logging
 logger = logging.getLogger(__name__)
 
+"""
+    draw_traces_nograph is editted to not generate graph. To avoid unnecessary figures in the console.
+"""
 
-# In[2]:
-
-
-# Edited function res_plotly() and draw_traces()
 
 def draw_traces_nograph(traces, on_map=False, map_style='basic', showlegend=True, figsize=1,
                 aspectratio='auto', filename='temp-plot.html'):
@@ -105,8 +81,8 @@ def draw_traces_nograph(traces, on_map=False, map_style='basic', showlegend=True
         **filename** (str, "temp-plot.html") - plots to a html file called filename
 
     OUTPUT:
-        **figure** (graph_objs._figure.Figure) figure object
-
+        **figure** (graph_objs._figure.Figure) figure object without showing the graph. The graph values
+            will be stored as variables.
     """
 
     if on_map:
@@ -216,6 +192,7 @@ def draw_traces_nograph(traces, on_map=False, map_style='basic', showlegend=True
 
 # Generating the plot for GENERAL users of the map
 
+
 def pf_res_plotly_gen(net, capacity_limit, cmap="binary_r", use_line_geodata=None, on_map=False, projection=None,
                   map_style='basic', figsize=1, aspectratio='auto', line_width=2, bus_size=10,
                   climits_volt=(0.9, 1.1), climits_load=(0, 100), cpos_volt=1.0, cpos_load=1.1,
@@ -271,8 +248,9 @@ def pf_res_plotly_gen(net, capacity_limit, cmap="binary_r", use_line_geodata=Non
         **filename** (str, "temp-plot.html") - filename / path to plot to. Should end on *.html
  
     OUTPUT:
-        **figure** (graph_objs._figure.Figure) figure object
- 
+        **figure** (graph_objs._figure.Figure) figure object. The bus color only has blue and red. Indicating
+        applicable or non applicable to connect the load.
+
     """
     version_check()
     if 'res_bus' not in net or net.get('res_bus').shape[0] == 0:
@@ -361,7 +339,8 @@ def pf_res_plotly_gen(net, capacity_limit, cmap="binary_r", use_line_geodata=Non
                        showlegend=False, aspectratio=aspectratio, on_map=on_map,
                        map_style=map_style, figsize=figsize, filename=filename)
 
-# Generating map for the technical users
+# Generating map for the technical users.
+
 
 def pf_res_plotly_eng(net, cmap="Jet", use_line_geodata=None, on_map=False, projection=None,
                   map_style='basic', figsize=1, aspectratio='auto', line_width=2, bus_size=10,
@@ -418,7 +397,8 @@ def pf_res_plotly_eng(net, cmap="Jet", use_line_geodata=None, on_map=False, proj
         **filename** (str, "temp-plot.html") - filename / path to plot to. Should end on *.html
 
     OUTPUT:
-        **figure** (graph_objs._figure.Figure) figure object
+        **figure** (graph_objs._figure.Figure) figure object. The bus color is spread into multiple color.
+         Indicating different level of capacity level in different buses.
 
     """
     version_check()
@@ -523,18 +503,23 @@ def pf_res_plotly_eng(net, cmap="Jet", use_line_geodata=None, on_map=False, proj
 # In[3]:
 
 
-
-""" 
-
-Extract data from time-series calculation. With result[0] being the vm_pu, result[1] being line_load, result[2] being trafo_loading_percent
-
-Return two list, networks & figures. Which will be later used for Dash.
-
- Some points here: 
-1. the time series loop through columns instead of rows. This is dealt in the two loop structure down below.
-
-"""
 def generate_graph_data_eng(net):
+    """
+
+    Extract data from time-series calculation. With result[0] being the vm_pu, result[1] being line_load, result[2] being trafo_loading_percent
+
+    Return two list, networks & figures. Which will be later used for Dash.
+
+    INPUT :
+    "net" data coming from the power flow analysis.
+
+    OUTPUT:
+    the time-series graph for engineering analysis.
+
+     Some points here:
+    1. the time series data has to be looped through columns instead of rows. This is dealt in the two loop structure down below.
+
+    """
     net = net
     result = pfa.load_files()
 
@@ -565,13 +550,14 @@ def generate_graph_data_eng(net):
        
     return networks, figures
 
-""" 
 
-Selecting the most important two graph for general users. 
-The function needs to be " revised " later on for one more function to determine what is the graph we are going to show.
-
-"""
 def generate_graph_data_gen(networks_eng, capacity_limit):
+    """
+    Selecting the two most representative graph for general users. Preferably in the future this will be
+    four worse case scenarios corresponding to four seasons in a year.
+
+    The function needs to be " revised " later on for one more function to determine what is the graph we are going to show.
+    """
     networks = networks_eng
     figures = [None]*2
 
@@ -580,104 +566,3 @@ def generate_graph_data_gen(networks_eng, capacity_limit):
     figures[1] = deepcopy(pf_res_plotly_gen(networks[90],capacity_limit,map_style='dark'))
        
     return figures
-
-
-# ### 2. Generate the grpah with Dash
-
-# In[4]:
-
-
-"""
-
-Generate Dash graph. Calling this function along is enough for generating the grapgh.
-
-Input:
-should be with (net_data, time_step)
-
-Outpuy:
-return a link to the Dash site.
-
-"""
-
-def generate_graph(input_data, time):
-    net = input_data
-    time_steps = time
-    
-    networks = [None]*len(net.res_bus.vm_pu)
-    figures = [None]*len(time_steps)
-    # extract time-series values
-    networks, figures = generate_graph_data(net)
-    
-    # take the correct order for slider
-    list_length = len(networks)-1
-
-    app = dash.Dash(__name__)
-
-    # ------------------------------------------------------------------------------
-    # App layout
-    app.layout = html.Div([
-
-        html.H1("Capacity Map with Dash component Testing", style={'text-align': 'center'}),
-
-        dcc.Dropdown(id="slct_year",
-                     options=[
-                         {"label": "2015", "value": 2015},
-                         {"label": "2016", "value": 2016},
-                         {"label": "2017", "value": 2017},
-                         {"label": "2018", "value": 2018}],
-                     multi=False,
-                     value=2015,
-                     style={'width': "40%"}
-                     ),
-
-        html.Br(),
-
-        dcc.Graph(id='my_powerFlow_graph',
-                  style={
-                      "margin-left": "auto",
-                      "margin-right": "auto",
-                  },
-                  figure={}),
-        html.Div(id='output_container_slider', children=[]),
-        html.Br(),
-
-        dcc.Slider(
-            id='my-slider',
-            min=0,
-            max=list_length,
-            step=1,
-            value=1,
-        ),
-
-    ],
-        # putting Style for the whole html.div block and it works!!!
-    style={'width': '50%','padding-left':'25%', 'padding-right':'25%'},
-    )
-
-
-    # ------------------------------------------------------------------------------
-    # Connect the Plotly graphs with Dash Components
-    @app.callback(
-        [Output(component_id='output_container_slider', component_property='children'),
-         Output(component_id='my_powerFlow_graph', component_property='figure')],
-        [Input(component_id='slct_year', component_property='value'),
-         Input(component_id = 'my-slider',component_property='value')]
-    )
-    def update_graph(option_slctd, slider_slctd):
-        print(option_slctd)
-        print(type(option_slctd))
-
-        container = "The year chosen by user was: {}".format(option_slctd)
-        container_slider = "The time chosen by user was: {}".format(slider_slctd)
-
-        fig_power = figures[slider_slctd]
-
-        # 上面的output對應到這邊的return，是按照順序的
-        # The output is correspoding to the return value below, by order
-        return container_slider, fig_power
-
-
-    # ------------------------------------------------------------------------------
-    if __name__ == '__main__':
-        return app.run_server(debug=True,use_reloader=False,port=3004)
-
