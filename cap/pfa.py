@@ -12,6 +12,8 @@ import os
 import tempfile
 from pandapower.timeseries import OutputWriter
 from pandapower.timeseries.run_time_series import run_timeseries
+from pandapowermod.timeseries.run_time_series_mod import run_timeseries_mod
+from pandapowermod.timeseries.run_time_series_mod1 import run_timeseries_mod1
 
 
 def get_init_all(net):
@@ -193,6 +195,19 @@ def feas_chk(net, ow, conn_at_bus, loadorgen, size_p, size_q, prof):
     return feas_result
 
 
+def feas_chk_mod(net, conn_at_bus, loadorgen, size_p, size_q, prof):
+    """
+    Same as feas_chk but implements modified run_timeseries function of panadapower to skip unecessary steps.
+    """
+    init_all = get_init_all(net)
+    net = add_loadgen(net, loadorgen, conn_at_bus, size_p, size_q, prof)
+    profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+    sb.apply_const_controllers(net, profiles)  # create timeseries data from profiles and run powerflow
+    chk = not run_timeseries_mod(net, time_steps, continue_on_divergence=True, verbose=True)  # Run powerflow only over time_steps
+    net = init_net(net, init_all)
+    return chk
+
+
 def max_cap(net, ow, conn_at_bus, loadorgen, ul_p, ll_p, prof):
     """
     Seach algorithm using feas_chk function over the range of ll_p and ul_p capacities
@@ -217,8 +232,8 @@ def max_cap(net, ow, conn_at_bus, loadorgen, ul_p, ll_p, prof):
     while not (((ul_p - ll_p) < s_tol) | (ul_chk & mid_chk) | (no_iter > 7)):
         no_iter = no_iter + 1
         mid_p = (ul_p + ll_p) / 2
-        ul_chk = feas_chk(net, ow, conn_at_bus, loadorgen, size_p=ul_p, size_q=inp_q, prof=prof)
-        mid_chk = feas_chk(net, ow, conn_at_bus, loadorgen, size_p=mid_p, size_q=inp_q, prof=prof)
+        ul_chk = feas_chk_mod(net, ow, conn_at_bus, loadorgen, size_p=ul_p, size_q=inp_q, prof=prof)
+        mid_chk = feas_chk_mod(net, ow, conn_at_bus, loadorgen, size_p=mid_p, size_q=inp_q, prof=prof)
         if mid_chk:
             ll_p = mid_p
         elif not mid_chk:
@@ -285,17 +300,19 @@ def all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):
 
     OUTPUT allcap (dataframe) - Maximum capacitiy of load/generation that can be added at all buses
     """
-    len_items = len(net.bus)-96
+    len_items = len(net.bus)
     items = list(range(0, len_items))
     printProgressBar(0, len_items, prefix='Progress:', suffix='Complete', length=50)
+
     allcap = net.bus[['name', 'vn_kv']]
-    allcap['max_add_cap'] = np.nan
-    allcap['lim_elm'] = np.nan
+    allcap = allcap.join(pd.DataFrame(np.zeros([len(net.bus),len(net.line)])))
     for i, conn_at_bus in enumerate(items):
-        max_cap_at_bus = max_cap(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen, ul_p=ul_p, ll_p=ll_p,
+        for out_line in net.line.index:
+            net.line.loc[out_line, "in_service"] = False
+            allcap[out_line][conn_at_bus] = max_cap(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen, ul_p=ul_p, ll_p=ll_p,
                                  prof=prof)
-        allcap['max_add_cap'][conn_at_bus] = max_cap_at_bus
-        printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)
+            net.line.loc[out_line, "in_service"] = True
+    printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)
     return allcap
 
 
@@ -325,16 +342,159 @@ def sing_res(net, ow, conn_at_bus, loadorgen, size_p, size_q, prof):
     feas_chk(net=net,ow=ow,conn_at_bus=conn_at_bus,loadorgen=loadorgen, size_p=size_p, size_q=size_q, prof=prof)
     return violations_long(net)
 
-def lim_elm_calc():
-    allcap['lim_elm'][conn_at_bus] = sing_res(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen,
-                                              size_p=max_cap_at_bus + 2 * s_tol, size_q=0.1, prof=prof)
+
+
+def resample_profiles(net, freq='H' ,head_values=96):
+    """
+    Resample profiles stored in net.profiles. Better alternative is resample_profiles_month
+
+    INPUT
+        net (PP net) - Pandapower net
+        freq (str) - frequency of resampling
+        head_values (int) - initial values to be resampled since the net.profiles is too large
+
+    OUTPUT
+        net (PP net) - Updated Pandapower net
+
+    """
+    for elm in net.profiles.keys():
+        net.profiles[elm] = net.profiles[elm].head(head_values)
+        net.profiles[elm].index = pd.to_datetime(
+            net.profiles[elm].time)  # pd.date_range(start='1/1/2021',freq='H',periods=len(net.profiles['load']))
+        # net.profiles[elm].drop('time', axis=1, inplace=True)
+        if all(net.profiles[elm].columns == 'time'):
+            net.profiles[elm] = net.profiles[elm].resample(freq).sum()
+        else:
+            net.profiles[elm] = net.profiles[elm].resample(freq).mean()
+    return net
+
+def resample_profiles_months(net, month=6):
+    """
+    Resample profiles stored in net.profiles for a paritular month into hours of day.
+
+    INPUT
+        net (PP net) - Pandapower net
+        month (int) - month number
+
+    OUTPUT
+        net (PP net) - Updated Pandapower net
+
+    """
+    for elm in net.profiles.keys():
+        #net.profiles[elm] = net.profiles[elm].groupby()
+        net.profiles[elm].index = pd.to_datetime(net.profiles[elm].time, dayfirst=True )
+        # pd.date_range(start='1/1/2021',freq='H',periods=len(net.profiles['load']))
+        # net.profiles[elm].drop('time', axis=1, inplace=True)
+        net.profiles[elm] = net.profiles[elm][net.profiles[elm].index.month == month]
+        if all(net.profiles[elm].columns == 'time'):
+            net.profiles[elm] = net.profiles[elm].groupby(net.profiles[elm].index.hour).sum()
+        else:
+            net.profiles[elm] = net.profiles[elm].groupby(net.profiles[elm].index.hour).mean()
+        #net.profiles[elm].index = pd.to_datetime(net.profiles[elm].index)
+
+
+    return net
+
+def get_profiles(net, new_cap_name, cap_steps=4000, cap_step_size=0.05, pf=0.95,resample_freq='H'):
+    """
+    Second method of calculating capacity map using updated run_time_series function of pandapower repository.
+    It joins multiple profiles together and runs a single run_timeseries.
+
+    INPUT
+        net (PP net) - Pandapower net
+        new_cap_name (str) - same as loadorgen. type of capacity to add at a bus.
+        cap_steps (int) - number of profiles to be joined together
+        cap_step_size (int) - increment of each cap step which are to be joined.
+        pf (int) - power factor
+        resample_freq (str) - resampling frequency given to resample function
+
+    OUTPUT
+        profiles (tuple) - profiles to be loaded before run_timeseries. (For application of pandapower controller)
+
+    """
+    length_of_profiles = len(net.profiles['load'])
+    profiles = sb.get_absolute_values(net, profiles_instead_of_study_cases=True)
+    # profiles=[profile[type]*0.05 for type in profiles]
+    for type in profiles:
+        profiles[type] = pd.concat([profiles[type]] * cap_steps)
+        profiles[type].index = pd.date_range(profiles[type].index[0], periods=len(profiles[type]), freq=resample_freq)
+    df = pd.Series(range(length_of_profiles * cap_steps))
+    df1 = pd.Series(range(length_of_profiles))
+    df_add = ((df - pd.concat([df1] * cap_steps, ignore_index=True)) * cap_step_size / length_of_profiles)
+    if new_cap_name == 'load':
+        df_add.index = profiles['load', 'p_mw'].index
+        profiles['load', 'p_mw'].iloc[:, -1] *= df_add
+        profiles['load', 'q_mw'].iloc[:, -1] *= df_add * ((1- pf*pf)**0.5)
+    elif new_cap_name == 'sgen':
+        df_add.index = profiles['sgen', 'p_mw'].index
+        profiles['sgen', 'p_mw'].iloc[:, -1] *= df_add
+    for elm in profiles:
+        profiles[elm].reset_index(inplace=True, drop=True)
+    return profiles
+
+
+def max_cap_map_new(net, loadorgen, conn_at_bus, prof, cap_steps=4000, cap_step_size=0.05, resample_freq='H', head_values_profiles=96):
+    """
+    Same as max_cap but works on the second method which joins same profiles together and runs a single timeseries instead of nested loops as in original method.
+    Each profile joined has increased incremental capacity of cap_step_size on the conn_at_bus
+    The single timeseries gets interrupted when violation occurs.
+    Inputs/output similar to get_profiles and max_cap
+
+
+    """
+    elm_day = pd.Timedelta('1D') / pd.Timedelta(str(1) + resample_freq)
+    init_all = get_init_all(net)
+    net = add_loadgen(net, loadorgen, conn_at_bus=conn_at_bus, prof=prof, size_p=1, size_q=1)
+    #net=resample_profiles(net, freq=resample_freq, head_values=head_values_profiles)
+    profiles = get_profiles(net, new_cap_name=loadorgen, cap_steps=cap_steps, cap_step_size=cap_step_size, resample_freq=resample_freq)
+    sb.apply_const_controllers(net, profiles)  # create timeseries data from profiles and run powerflow
+    violation_at_step = run_timeseries_mod(net, continue_on_divergence=False,
+                                          verbose=True)  # Run powerflow only over time_steps
+    net=init_net(net, init_all)
+    max_calc = (violation_at_step - violation_at_step % elm_day) * cap_step_size / elm_day
+    return max_calc
+
+
+def max_cap_map_new_cont(net, loadorgen, conn_at_bus, prof, cap_steps=100, cap_step_size=0.1, resample_freq='H', head_values_profiles=96):
+    """
+    Same as max_cap_map_new with contringency analysis.
+    """
+    elm_day = pd.Timedelta('1D') / pd.Timedelta(str(1) + resample_freq)
+    min_violation_step=elm_day*cap_steps
+    for out_line in net.line.index:
+        net.line.loc[out_line, "in_service"] = False
+        init_all = get_init_all(net)
+        net = add_loadgen(net, loadorgen, conn_at_bus=conn_at_bus, prof=prof, size_p=1, size_q=1)
+        #net=resample_profiles(net, freq=resample_freq, head_values=head_values_profiles)
+        profiles = get_profiles(net, new_cap_name=loadorgen, cap_steps=cap_steps, cap_step_size=cap_step_size, resample_freq=resample_freq)
+        sb.apply_const_controllers(net, profiles)  # create timeseries data from profiles and run powerflow
+        violation_at_step = run_timeseries_mod(net, continue_on_divergence=False,
+                                              verbose=True)  # Run powerflow only over time_steps
+        net = init_net(net, init_all)
+        if violation_at_step < min_violation_step:
+            min_violation_step = violation_at_step
+        net.line.loc[out_line, "in_service"] = True
+    return (min_violation_step - min_violation_step % elm_day) * cap_step_size / elm_day
+
+
+def all_cap_new(net,loadorgen,prof):
+    """
+    Looping max_cap_map_new_cont over all bus
+    """
+    allcap = net.bus[['name', 'vn_kv']]
+    col_name = 'max_add_'+loadorgen
+    allcap[col_name] = np.nan
+    for i in range(97, len(net.bus)):
+        allcap[col_name][i] = max_cap_map_new_cont(net, conn_at_bus=i, loadorgen=loadorgen, prof=prof)
+    return allcap
+
 
 
 ll_p = 0
 ul_p = 90
 inp_q = 0.1
 s_tol = 0.005
-time_steps = range(96)
+time_steps = range(24)
 
 output_dir = os.path.join(tempfile.gettempdir(), "simp_cap_v3")
 # output_dir = os.path.join('C:\\Users\\nitbh\\OneDrive\\Documents\\IIPNB', "simp_cap_v3")
