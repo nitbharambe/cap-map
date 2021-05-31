@@ -14,6 +14,7 @@ from dash.dependencies import Input, Output
 
 # for copy panda object
 from copy import deepcopy
+import plotly.express as px
 
 # for editing the draw_trace() function
 from pandapower.plotting.plotly.traces import _in_ipynb
@@ -566,7 +567,7 @@ def generate_graph_data_gen(networks_eng, capacity_limit):
        
     return figures
 
-def cap_map_scatter():
+def cap_map_scatter(net):
     # Load data from all cap here. Calculated and stored earlier for saving time
     net.bus['max_load'] = pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
     net.bus['max_sgen'] = pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
