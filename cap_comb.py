@@ -2,6 +2,8 @@ from cap import pfa
 from cap import viz
 import simbench as sb
 import pandas as pd
+import plotly.express as px
+
 # for Dash import (might change Dash into a single function)
 import dash  # (version 1.12.0) pip install dash
 import dash_core_components as dcc
@@ -25,7 +27,7 @@ net.bus.max_vm_pu = net.bus.max_vm_pu * 1.05
 
 ### Other parameters
 
-ow = pfa.define_log(net, time_steps)  # For logging variables
+ow = pfa.define_log(net, time_steps=range(96))  # For logging variables
 
 ## Get Map / PFA
 '''
