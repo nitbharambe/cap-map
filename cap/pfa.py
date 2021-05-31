@@ -243,12 +243,13 @@ def max_cap(net, ow, conn_at_bus, loadorgen, ul_p, ll_p, prof):
     return ll_p
 
 
-'''
+
 def printProgressBar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
     https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
     
     Call in a loop to create terminal progress bar
+    TODO Progress bar from stackoverflow. Not added to program.
     @params:
         iteration   - Required  : current iteration (Int)
         total       - Required  : total iterations (Int)
@@ -266,22 +267,6 @@ def printProgressBar(iteration, total, prefix = '', suffix = '', decimals = 1, l
     # Print New Line on Complete
     if iteration == total: 
         print()
-'''
-
-
-def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
-    """
-    Call in a loop to create terminal progress bar.
-    the code is mentioned in : https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
-    """
-    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filled_length = int(length * iteration // total)
-    bar = fill * filled_length + '-' * (length - filled_length)
-    # logger.info('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix))
-    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end="")
-    # Print New Line on Complete
-    if iteration == total:
-        print("\n")
 
 
 def all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):
@@ -302,7 +287,7 @@ def all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):
     """
     len_items = len(net.bus)
     items = list(range(0, len_items))
-    printProgressBar(0, len_items, prefix='Progress:', suffix='Complete', length=50)
+    #printProgressBar(0, len_items, prefix='Progress:', suffix='Complete', length=50)
 
     allcap = net.bus[['name', 'vn_kv']]
     allcap = allcap.join(pd.DataFrame(np.zeros([len(net.bus),len(net.line)])))
@@ -312,7 +297,8 @@ def all_cap_map(net, ow, loadorgen, ul_p, ll_p, prof):
             allcap[out_line][conn_at_bus] = max_cap(net, ow=ow, conn_at_bus=conn_at_bus, loadorgen=loadorgen, ul_p=ul_p, ll_p=ll_p,
                                  prof=prof)
             net.line.loc[out_line, "in_service"] = True
-    printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)
+    #printProgressBar(i + 1, len_items, prefix='Progress:', suffix='Complete', length=50)
+    allcap.to_csv('sampdata/' + datetime.now().strftime("%Y_%m_%d_%H%M%S") + '_allcap.csv')
     return allcap
 
 
@@ -489,7 +475,16 @@ def all_cap_new(net,loadorgen,prof):
     return allcap
 
 
-
+'''
+time_steps:Set time steps in range for the timeseries module to compute over. 
+    This parameter must be of same length as the length of profiles.
+ll_p and ul_p : limits for maximum and minimum capacity that can be added to any bus
+inp_q: input reactive power for added capacity. Assumed constant
+s_tol: Search algorithm tolerance (in MW)
+output_dir : Set directory for storing the logged varaiables. 
+    Commented output_dir line is for setting directory in the temporary files of the computer.
+ow: Create the output writer object ow
+'''
 ll_p = 0
 ul_p = 90
 inp_q = 0.1
