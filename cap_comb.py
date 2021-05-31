@@ -2,14 +2,14 @@ from cap import pfa
 from cap import viz
 import simbench as sb
 import pandas as pd
-import plotly.express as px
+
 
 # for Dash import (might change Dash into a single function)
 import dash  # (version 1.12.0) pip install dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-import dash_bootstrap_components as dbc
+#import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 
 ### Input Grid
@@ -40,20 +40,21 @@ sing_res function is for checking individual case analysis
 '''
 
 net = pfa.resample_profiles_months(net, month=6)
-sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
+#sgen_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='sgen', ul_p=ul_p, ll_p=ll_p, prof='WP4')
 # load_allcap=pfa.all_cap_map(net,ow=ow, loadorgen='load', ul_p=ul_p, ll_p=ll_p, prof='L0-A')
 # One sample run is needed to initiate visualisation
-#pfa.max_cap(net,ow=ow,conn_at_bus=92, loadorgen='sgen',ul_p=ul_p, ll_p=ll_p, prof='WP4')
-# pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
+pfa.sing_res(net,ow=ow,conn_at_bus=95, loadorgen='load',size_p=10,size_q=0.1, prof='L0-A')
+
+# Uncomment for Mapbox scatter plot
+#viz.cap_map_scatter(net)
 
 
 ## Visualisation
 
-'''
-Load data from all cap here. Calculated and stored earlier for saving time  
-'''
-# net.load['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
-net.sgen['max_sgen'] = pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
+
+#Load data from all cap here. Calculated and stored earlier for saving time  
+net.bus['max_load']=pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
+net.bus['max_sgen'] = pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
 
 
 #####################################################################

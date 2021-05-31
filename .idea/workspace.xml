@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="Added .py file along with map from joe">
+    <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="Adding mapbox scatter">
+      <change afterPath="$PROJECT_DIR$/.idea/other.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/viz.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap/viz.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cap_comb.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap_comb.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -39,6 +41,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../cap-map-main" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
@@ -87,6 +90,7 @@
       <workItem from="1616542118611" duration="1294000" />
       <workItem from="1617029325339" duration="1708000" />
       <workItem from="1617051185921" duration="3715000" />
+      <workItem from="1622439548128" duration="14356000" />
     </task>
     <task id="LOCAL-00001" summary="Change output_dir, add results from csv">
       <created>1616456769405</created>
@@ -123,11 +127,70 @@
       <option name="project" value="LOCAL" />
       <updated>1617062189388</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Final update of pfa including second method.">
+      <created>1622439508458</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1622439508458</updated>
+    </task>
+    <task id="LOCAL-00007" summary="pfa side comb commit">
+      <created>1622464502670</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1622464502670</updated>
+    </task>
+    <task id="LOCAL-00008" summary="pfa side comb commit">
+      <created>1622464513301</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1622464513301</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Final update of pfa including second method.">
+      <created>1622465496684</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1622465496684</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Adding modified pandapower repository">
+      <created>1622472700386</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1622472700386</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Adding mapbox scatter">
+      <created>1622477023701</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1622477023701</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Adding mapbox scatter">
+      <created>1622477108997</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1622477108997</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ID_ORDER">
+      <list>
+        <option value="Default.Root" />
+        <option value="Default.Author" />
+        <option value="Default.Date" />
+        <option value="Default.Subject" />
+      </list>
+    </option>
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -157,9 +220,35 @@
     <MESSAGE value="Change output_dir, add results from csv" />
     <MESSAGE value="Fix some issues" />
     <MESSAGE value="Added .py file along with map from joe" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added .py file along with map from joe" />
+    <MESSAGE value="pfa side comb commit" />
+    <MESSAGE value="Final update of pfa including second method." />
+    <MESSAGE value="Adding modified pandapower repository" />
+    <MESSAGE value="Adding mapbox scatter" />
+    <option name="LAST_COMMIT_MESSAGE" value="Adding mapbox scatter" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/cap_comb.py</url>
+          <line>52</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/cap_comb.py</url>
+          <line>58</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/Lib/site-packages/pandapower/plotting/plotly/mapbox_plot.py</url>
+          <line>39</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/cap_map$cap_comb.coverage" NAME="cap_comb Coverage Results" MODIFIED="1617061966686" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cap_map$test.coverage" NAME="test Coverage Results" MODIFIED="1617400844835" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cap_map$cap_comb.coverage" NAME="cap_comb Coverage Results" MODIFIED="1622477318672" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
