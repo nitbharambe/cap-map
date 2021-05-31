@@ -529,7 +529,6 @@ def generate_graph_data_eng(net):
 
     # looping to get the time-series data into the list ( i = number(timeseries) networks)
     for i in np.arange(len(result[0])):
-        
         # here iterate through res_bus.vm_pu, ( result[0] )
         for j in np.arange(len(result[0].columns)):
             net.res_bus.vm_pu[j] = result[0][j][i]
@@ -566,3 +565,19 @@ def generate_graph_data_gen(networks_eng, capacity_limit):
     figures[1] = deepcopy(pf_res_plotly_gen(networks[90],capacity_limit,map_style='dark'))
        
     return figures
+
+def cap_map_scatter():
+    # Load data from all cap here. Calculated and stored earlier for saving time
+    net.bus['max_load'] = pd.read_csv("sampdata/samp_load_allcap.csv")['max_add_cap']
+    net.bus['max_sgen'] = pd.read_csv("sampdata/samp_sgen_allcap.csv")['max_add_cap']
+    # viz.pf_res_plotly_gen(net, capacity_limit=2, cmap="binary_r", use_line_geodata=None, on_map=False, projection=None)
+    # map_data['max_load'] = net.bus['max_load']
+    map_data = pd.DataFrame(net.bus['max_load'])
+    map_data['max_sgen'] = net.bus['max_sgen']
+    map_data['name'] = net.bus['name']
+    map_data['lon'] = net.bus_geodata['x']
+    map_data['lat'] = net.bus_geodata['y']
+    fig = px.scatter_mapbox(map_data, lat="lat", lon="lon", hover_name="name", hover_data=["max_sgen", "max_load"],
+                            color_discrete_sequence=["blue"], zoom=10, height=700)
+    fig.update_layout(mapbox_style="open-street-map")
+    fig.show()
