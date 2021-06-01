@@ -2,9 +2,20 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="710cff92-6522-4a5b-b421-90a4e8d4e451" name="Default Changelist" comment="Adding mapbox scatter">
-      <change afterPath="$PROJECT_DIR$/.idea/other.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cap/viz.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap/viz.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/Solar_genDec.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/Solar_genDec.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/Solar_genJun.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/Solar_genJun.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/peak_calculation" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/peak_calculation" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential[24 elements].py" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential[24 elements].py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_summer.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_summer.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_summer_24elements.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_summer_24elements.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_summer_df_revised.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_summer_df_revised.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_summer_sorted.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_summer_sorted.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_winter.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_winter.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_winter_24elements.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_winter_24elements.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_winter_df_revised.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_winter_df_revised.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/profile_residential_winter_sorted.csv" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/profile_residential_winter_sorted.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cap/solar_power" beforeDir="false" afterPath="$PROJECT_DIR$/profiles/solar_power" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cap_comb.py" beforeDir="false" afterPath="$PROJECT_DIR$/cap_comb.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -90,7 +101,7 @@
       <workItem from="1616542118611" duration="1294000" />
       <workItem from="1617029325339" duration="1708000" />
       <workItem from="1617051185921" duration="3715000" />
-      <workItem from="1622439548128" duration="14356000" />
+      <workItem from="1622439548128" duration="16065000" />
     </task>
     <task id="LOCAL-00001" summary="Change output_dir, add results from csv">
       <created>1616456769405</created>
@@ -176,7 +187,21 @@
       <option name="project" value="LOCAL" />
       <updated>1622477108997</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Adding mapbox scatter">
+      <created>1622477562358</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1622477562358</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Adding mapbox scatter">
+      <created>1622477577061</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1622477577061</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -230,16 +255,6 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/cap_comb.py</url>
-          <line>52</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/cap_comb.py</url>
-          <line>58</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$USER_HOME$/anaconda3/Lib/site-packages/pandapower/plotting/plotly/mapbox_plot.py</url>
           <line>39</line>
           <option name="timeStamp" value="3" />
@@ -249,6 +264,6 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/cap_map$test.coverage" NAME="test Coverage Results" MODIFIED="1617400844835" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/cap_map$cap_comb.coverage" NAME="cap_comb Coverage Results" MODIFIED="1622477318672" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cap_map$cap_comb.coverage" NAME="cap_comb Coverage Results" MODIFIED="1622547880599" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
