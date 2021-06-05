@@ -1,7 +1,7 @@
 # cap-map
 Grid capacity map generation using pandapower.
 
-Use cap_comb to get the map. First half of the file (till line 47) is a time intesive is calculation of power flow by pfa.all_cap_map function. The result is then stored in sampdata directory. The next section visualisation plots that map. So running the 2 sections separately is advisable
+Use cap_comb to get the map. First half of the file (until line 47) is a time consuming calculation of power flow by pfa.all_cap_map function. The result is then stored in sampdata directory. The next section visualisation plots that map. So running the 2 sections separately is advisable
 
 Two features presented in the simple model are visible in this map.
 1) Maximum capacity possible at each bus is mentioned by the tooltip on nodes.
